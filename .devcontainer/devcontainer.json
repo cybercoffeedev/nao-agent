@@ -1,0 +1,13 @@
+{
+    "name": "nao-devcontainer",
+    "build": {
+        "dockerfile": "../Dockerfile"
+    },
+    "customizations": {
+        "vscode": {
+            "extensions": [
+                "ms-python.python"
+            ]
+        }
+    }
+}
