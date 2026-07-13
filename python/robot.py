@@ -105,7 +105,23 @@ class Robot:
         self.memory = self.session.service("ALMemory")
         self.speech_reco = self.session.service("ALSpeechRecognition")
         self.leds = self.session.service("ALLeds")
+        self.motion = self.session.service("ALMotion")
         self.eyes = RobotEyes(self.session)
+
+        names = ["RShoulderPitch", "RShoulderRoll", "RElbowRoll", "RWristYaw"]
+        
+        angle_lists = [
+            [  -1,   -1,   -1,   -1,   -1,   -1,  1.5], # RShoulderPitch
+            [-0.5, -0.5, -0.5, -0.5, -0.5, -0.5, -0.3], # RShoulderRoll
+            [ 1.3,  0.2,  1.2,  0.2,  1.2,  0.2,  0.5], # RElblowRoll 
+            [ 0.5, -0.5,  0.5, -0.5,  0.5, -0.5,  0.0]  # RWristYaw
+        ]
+        
+        time_lists = [[1.5, 1.75, 2, 2.35, 2.75, 3, 4.5] for _ in range(4)]
+        
+        is_absolute = True
+
+        self.motion.angleInterpolation(names, angle_lists, time_lists, is_absolute)
 
         self.speech_reco.setLanguage("Polish")
         
