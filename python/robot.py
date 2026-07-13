@@ -7,16 +7,12 @@ class RobotEyes:
         Args:
             session (qi.Session): Active session connected to the NAO robot.
         """
+        self.blinking = session.service("ALAutonomousBlinking")
+        self.blinking.setEnabled(False) # Disable autonomous blinking
         self.leds = session.service("ALLeds")
         self.eye_leds = [
-            "FaceLed0",
-            "FaceLed1",
-            "FaceLed2",
-            "FaceLed3",
-            "FaceLed4",
-            "FaceLed5",
-            "FaceLed6",
-            "FaceLed7"
+            "FaceLed0", "FaceLed1", "FaceLed2", "FaceLed3",
+            "FaceLed4", "FaceLed5", "FaceLed6", "FaceLed7"
         ]
         self.task = qi.PeriodicTask()
         self.task.setCallback(self._animation_step)
@@ -32,15 +28,15 @@ class RobotEyes:
             case "listening":
                 self.leds.fadeRGB("FaceLeds", 0x0000FFFF, 0.0)
             case "thinking":
-                self.leds.setIntensity("FaceLeds", 0.0)
+                main_led    = self.eye_leds[self.step % 8]
+                fade_led_1  = self.eye_leds[(self.step - 1) % 8]
+                fade_led_2  = self.eye_leds[(self.step - 2) % 8]
+                off_led     = self.eye_leds[(self.step - 3) % 8]
 
-                main_led = self.eye_leds[self.step % 8]
-                fade_led_1 = self.eye_leds[(self.step - 1) % 8]
-                fade_led_2 = self.eye_leds[(self.step - 1) % 8]
-
-                self.leds.setIntensity(main_led.strip(), 1.0)
-                self.leds.setIntensity(fade_led_1.strip(), 0.7)
-                self.leds.setIntensity(fade_led_2.strip(), 0.5)
+                self.leds.setIntensity(main_led, 1.0)
+                self.leds.setIntensity(fade_led_1, 0.6)
+                self.leds.setIntensity(fade_led_2, 0.2)
+                self.leds.setIntensity(off_led, 0.0)
 
                 self.step += 1
 
