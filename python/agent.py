@@ -4,6 +4,7 @@ from asr import RivaASR
 from llm import LLMManager
 
 class RobotAgent:
+    """Central orchestrator for the voice-based chatbot loop."""
     def __init__(self, robot: Robot, asr: RivaASR, llm: LLMManager):
         """Initializes the chatbot agent.
 
@@ -21,28 +22,22 @@ class RobotAgent:
         and records audio until silence threshold is reached.
         """
         speech_started = False
-        silence_start_time = None
-        silence_duration = 1.5
+        silence_start = None
 
         self.robot.start_audio_recording()
         while True:
-            is_speaking = self.robot.memory.getData("SpeechDetected")
-            if is_speaking:
+            speaking = self.robot.memory.getData("SpeechDetected")
+            if speaking:
                 if not speech_started:
-                    print("Robot is listening")
-                    if self.robot.eyes:
-                        self.robot.eyes.set_animation_mode("listening")
+                    self.robot.set_eyes("listening")
                     speech_started = True
-                silence_start_time = None
-            else:
-                if speech_started:
-                    if silence_start_time is None:
-                        silence_start_time = time.time()
-                    elif time.time() - silence_start_time >= silence_duration:
-                        print("Robot stopped listening")
-                        if self.robot.eyes:
-                            self.robot.eyes.set_animation_mode(None)
-                        break
+                silence_start = None
+            elif speech_started:
+                if silence_start is None:
+                    silence_start = time.time()
+                elif time.time() - silence_start >= 1.5:
+                    self.robot.set_eyes(None)
+                    break
             time.sleep(0.1)
         self.robot.stop_audio_recording()
 
@@ -52,7 +47,6 @@ class RobotAgent:
             with paramiko.SSHClient() as ssh:
                 ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
                 ssh.connect(self.robot.ip, port=22, username=self.robot.username, password=self.robot.password)
-                
                 with ssh.open_sftp() as sftp:
                     sftp.get(self.robot.remote_wav_path, self.robot.local_wav_path)
         except Exception as e:
@@ -64,23 +58,17 @@ class RobotAgent:
         listening to speech, transcribing, requesting replies, and vocalizing responses.
         """
         self.robot.connect_to_robot()
-        print("Chatbot agent is running...")
         while True:
             self.listen_for_speech()
             self.download_audio_from_robot()
-            
-            if self.robot.eyes:
-                self.robot.eyes.set_animation_mode("thinking")
-                
-            recognized_text = self.asr.transcribe_audio()
-            
-            if recognized_text is not None:
-                self.llm.add_user_message(recognized_text)
-                msg = self.llm.generate_response()
-                if self.robot.eyes:
-                    self.robot.eyes.set_animation_mode(None)
-                self.robot.speak(msg)
-            else:
-                if self.robot.eyes:
-                    self.robot.eyes.set_animation_mode(None)
+            self.robot.set_eyes("thinking")
+
+            text = self.asr.transcribe_audio()
+            if text:
+                self.llm.add_user_message(text)
+                response = self.llm.generate_response()
+                self.robot.set_eyes(None)
+                self.robot.speak(response)
+
+            self.robot.set_eyes(None)
             time.sleep(1.0)
