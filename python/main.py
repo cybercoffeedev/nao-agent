@@ -41,7 +41,8 @@ def main():
         api_key=os.environ["NVIDIA_API_KEY"],
         url=os.environ["OPENAI_BASE_URL"],
         model=os.environ["MODEL"],
-        system_msg=load_system_prompt()
+        system_msg=load_system_prompt(),
+        actions=Robot.ACTIONS,
     )
 
     RobotAgent(robot, asr, llm).run()

@@ -54,21 +54,25 @@ class RobotAgent:
             sys.exit(1)
 
     def run(self):
-        """Starts the interactive chatbot main loop, connecting to the robot,
-        listening to speech, transcribing, requesting replies, and vocalizing responses.
-        """
+        """Starts the interactive chatbot main loop."""
         self.robot.connect_to_robot()
-        while True:
-            self.listen_for_speech()
-            self.download_audio_from_robot()
-            self.robot.set_eyes("thinking")
 
-            text = self.asr.transcribe_audio()
-            if text:
-                self.llm.add_user_message(text)
-                response = self.llm.generate_response()
+        try:
+            while True:
+                self.listen_for_speech()
+                self.download_audio_from_robot()
+                self.robot.set_eyes("thinking")
+
+                text = self.asr.transcribe_audio()
+                if text:
+                    self.llm.add_user_message(text)
+                    text, actions = self.llm.generate_response()
+                    self.robot.set_eyes(None)
+                    self.robot.speak(text)
+                    for action in actions:
+                        self.robot.execute_action(action)
+
                 self.robot.set_eyes(None)
-                self.robot.speak(response)
-
-            self.robot.set_eyes(None)
-            time.sleep(1.0)
+                time.sleep(1.0)
+        except KeyboardInterrupt:
+            pass

@@ -42,9 +42,15 @@ class RobotEyes:
         else:
             self.leds.setIntensity("FaceLeds", 1.0)
 
-
 class Robot:
     """Manages connection and communication with a NAO robot."""
+    ACTIONS = {
+        "wave_right_hand": {
+            "method": "wave_right_hand",
+            "description": "Wave your right hand in greeting. Use this when someone greets the robot or waves at it.",
+        },
+    }
+
     def __init__(self, ip, port, username, password, remote_wav_path, local_wav_path):
         """Initializes NAO robot configuration parameters.
 
@@ -71,9 +77,7 @@ class Robot:
         self.motion = None
 
     def connect_to_robot(self):
-        """Establishes tcp session connection to robot, registers AL services,
-        and pauses speech recognition to initialize vocabulary.
-        """
+        """Establishes tcp session connection to robot and registers AL services."""
         self.session = qi.Session()
         try:
             self.session.connect(f"tcp://{self.ip}:{self.port}")
@@ -88,21 +92,23 @@ class Robot:
         self.motion = self.session.service("ALMotion")
         self.eyes = RobotEyes(self.session)
 
+        self.speech_reco.setLanguage("Polish")
+        self.speech_reco.pause(True)
+        self.speech_reco.setVocabulary(["NAO"], False)
+        self.speech_reco.pause(False)
+
+    def wave_right_hand(self):
+        """Performs a waving animation with the robot's right arm."""
         is_absolute = True
         names = ["RShoulderPitch", "RShoulderRoll", "RElbowRoll", "RWristYaw"]
         time_lists = [[1.5, 1.75, 2, 2.35, 2.75, 3, 4.5] for _ in range(4)]
         angle_lists = [
             [  -1,   -1,   -1,   -1,   -1,   -1,  1.5], # RShoulderPitch
             [-0.5, -0.5, -0.5, -0.5, -0.5, -0.5, -0.3], # RShoulderRoll
-            [ 1.3,  0.2,  1.2,  0.2,  1.2,  0.2,  0.5], # RElblowRoll 
+            [ 1.3,  0.2,  1.2,  0.2,  1.2,  0.2,  0.5], # RElblowRoll
             [ 0.5, -0.5,  0.5, -0.5,  0.5, -0.5,  0.0]  # RWristYaw
         ]
         self.motion.angleInterpolation(names, angle_lists, time_lists, is_absolute)
-
-        self.speech_reco.setLanguage("Polish")
-        self.speech_reco.pause(True)
-        self.speech_reco.setVocabulary(["NAO"], False)  # Needed for reco to work
-        self.speech_reco.pause(False)
 
     def start_audio_recording(self):
         """Starts recording audio through the robot's microphones and subscribes
@@ -140,3 +146,14 @@ class Robot:
             self.tts.say(text)
         except Exception as e:
             print(f"Couldn't say the message: {e}", file=sys.stderr)
+
+    def execute_action(self, name: str):
+        """Executes a named action from the ACTIONS registry.
+
+        Args:
+            name (str): Action key from Robot.ACTIONS.
+        """
+        if name in self.ACTIONS:
+            getattr(self, self.ACTIONS[name]["method"])()
+        else:
+            print(f"Unknown action: {name}", file=sys.stderr)
