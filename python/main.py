@@ -11,12 +11,8 @@ def load_system_prompt():
     Returns:
         str: The system message content, or an empty string if the file is not found.
     """
-    system_msg = ""
-    system_msg_path = "data/system_msg.txt"
     try:
-        with open(system_msg_path, 'r') as file:
-            system_msg += file.read()
-        return system_msg
+        return open("data/system_msg.txt").read()
     except FileNotFoundError:
         print("data/system_msg.txt not found", file=sys.stderr)
         return ""
@@ -26,47 +22,29 @@ def main():
     initializes the robot connection, speech recognizer, LLM context, and starts
     the chatbot agent.
     """
-    # Load .env
     load_dotenv()
 
-    ROBOT_IP = os.environ.get("ROBOT_IP")
-    ROBOT_PORT = int(os.environ.get("ROBOT_PORT", 9559))
-    ROBOT_USER = os.environ.get("ROBOT_USERNAME", "nao")
-    ROBOT_PASS = os.environ.get("ROBOT_PASSWORD", "nao")
-    NVIDIA_API_KEY = os.environ.get("NVIDIA_API_KEY")
-    OPENAI_BASE_URL = os.environ.get("OPENAI_BASE_URL")
-    MODEL = os.environ.get("MODEL")
-    ASR_FUNCTION_ID = os.environ.get("ASR_FUNCTION_ID")
-
-    WAV_FILENAME = "capture.wav"
-    REMOTE_WAV_PATH = f"/home/nao/{WAV_FILENAME}"
-    LOCAL_WAV_PATH = f"./{WAV_FILENAME}"
-
-    system_msg = load_system_prompt()
-    
     robot = Robot(
-        ip=ROBOT_IP,
-        port=ROBOT_PORT,
-        username=ROBOT_USER,
-        password=ROBOT_PASS,
-        remote_wav_path=REMOTE_WAV_PATH,
-        local_wav_path=LOCAL_WAV_PATH
+        ip=os.environ["ROBOT_IP"],
+        port=int(os.getenv("ROBOT_PORT", 9559)),
+        username=os.getenv("ROBOT_USERNAME", "nao"),
+        password=os.getenv("ROBOT_PASSWORD", "nao"),
+        remote_wav_path="/home/nao/capture.wav",
+        local_wav_path="./capture.wav"
     )
     asr = RivaASR(
-        api_key=NVIDIA_API_KEY,
-        function_id=ASR_FUNCTION_ID,
-        local_wav_path=LOCAL_WAV_PATH,
+        api_key=os.environ["NVIDIA_API_KEY"],
+        function_id=os.environ["ASR_FUNCTION_ID"],
+        local_wav_path="./capture.wav",
     )
     llm = LLMManager(
-        api_key=NVIDIA_API_KEY,
-        url=OPENAI_BASE_URL,
-        model=MODEL,
-        system_msg=system_msg
+        api_key=os.environ["NVIDIA_API_KEY"],
+        url=os.environ["OPENAI_BASE_URL"],
+        model=os.environ["MODEL"],
+        system_msg=load_system_prompt()
     )
 
-    agent = RobotAgent(robot=robot, asr=asr, llm=llm)
-    agent.run()
-
+    RobotAgent(robot, asr, llm).run()
 
 if __name__ == "__main__":
     main()
