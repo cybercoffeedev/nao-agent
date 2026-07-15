@@ -69,6 +69,10 @@ class Robot:
             "method": "lie_on_back",
             "description": "Make the robot lie down on its back. Use this when the robot needs to rest or lie flat on its back.",
         },
+        "get_status": {
+            "method": "get_status",
+            "description": "Check the robot's status including battery level, charging state, and CPU temperature.",
+        },
     }
 
     def __init__(self, ip, port, username, password, remote_wav_path, local_wav_path):
@@ -96,6 +100,7 @@ class Robot:
         self.eyes = None
         self.motion = None
         self.posture = None
+        self.battery = None
     def connect_to_robot(self):
         """Establishes tcp session connection to robot and registers AL services."""
         self.session = qi.Session()
@@ -106,6 +111,7 @@ class Robot:
             sys.exit(1)
 
         self.posture = self.session.service("ALRobotPosture")
+        self.battery = self.session.service("ALBattery")
         self.audio_recorder = self.session.service("ALAudioRecorder")
         self.tts = self.session.service("ALTextToSpeech")
         self.memory = self.session.service("ALMemory")
@@ -167,6 +173,27 @@ class Robot:
             return "Already lying on back."
         self.posture.goToPosture("LyingBack", 0.8)
         return "Lying on back."
+
+    def get_status(self):
+        """Returns the robot's current status including battery, charging state, and temperature."""
+        battery = self.battery.getBatteryCharge()
+        current = self.memory.getData("Device/SubDeviceList/Battery/Current/Sensor/Value")
+        cpu_temp = self.memory.getData("Device/SubDeviceList/Head/Temperature/Sensor/Value")
+        
+        # Determine charging state from current (positive = charging, negative = discharging)
+        try:
+            is_charging = float(current) > 0
+            charging_state = "Charging" if is_charging else "On battery"
+        except (ValueError, TypeError):
+            charging_state = "Unknown"
+        
+        # Format temperature value
+        try:
+            cpu_temp = round(float(cpu_temp), 1)
+        except (ValueError, TypeError):
+            cpu_temp = "N/A"
+        
+        return f"Battery: {battery}% ({charging_state}), CPU temp: {cpu_temp}°C"
 
     def start_audio_recording(self):
         """Starts recording audio through the robot's microphones and subscribes

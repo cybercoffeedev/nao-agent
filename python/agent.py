@@ -65,12 +65,15 @@ class RobotAgent:
             self.robot.speak(raw)
             return
 
-        for step in steps:
+        for i, step in enumerate(steps):
             if "speak" in step:
                 self.robot.speak(step["speak"])
             elif "action" in step:
                 result = self.robot.execute_action(step["action"])
-                self.llm.add_assistant_message(f"[action result: {result}]")
+                has_following_speak = any("speak" in s for s in steps[i+1:])
+                if not has_following_speak:
+                    self.llm.add_user_message(f"[ Action result: {result} ]")
+                    self.robot.speak(self.llm.generate_response())
 
     def run(self):
         """Starts the interactive chatbot main loop."""
