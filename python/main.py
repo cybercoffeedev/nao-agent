@@ -42,7 +42,6 @@ def main():
         url=os.environ["OPENAI_BASE_URL"],
         model=os.environ["MODEL"],
         system_msg=load_system_prompt(),
-        actions=Robot.ACTIONS,
     )
 
     RobotAgent(robot, asr, llm).run()

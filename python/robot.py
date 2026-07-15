@@ -49,6 +49,26 @@ class Robot:
             "method": "wave_right_hand",
             "description": "Wave your right hand in greeting. Use this when someone greets the robot or waves at it.",
         },
+        "get_posture": {
+            "method": "get_posture",
+            "description": "Check the robot's current posture. Returns whether the robot is standing, sitting, etc.",
+        },
+        "sit_down": {
+            "method": "sit_down",
+            "description": "Make the robot sit down. If already sitting, it will inform you instead.",
+        },
+        "stand_up": {
+            "method": "stand_up",
+            "description": "Make the robot stand up. If already standing, it will inform you instead.",
+        },
+        "lie_on_stomach": {
+            "method": "lie_on_stomach",
+            "description": "Make the robot lie down on its stomach. Use this when the robot needs to rest or lie flat on its belly.",
+        },
+        "lie_on_back": {
+            "method": "lie_on_back",
+            "description": "Make the robot lie down on its back. Use this when the robot needs to rest or lie flat on its back.",
+        },
     }
 
     def __init__(self, ip, port, username, password, remote_wav_path, local_wav_path):
@@ -75,7 +95,7 @@ class Robot:
         self.speech_reco = None
         self.eyes = None
         self.motion = None
-
+        self.posture = None
     def connect_to_robot(self):
         """Establishes tcp session connection to robot and registers AL services."""
         self.session = qi.Session()
@@ -85,6 +105,7 @@ class Robot:
             print(f"Failed connecting to robot: {e}", file=sys.stderr)
             sys.exit(1)
 
+        self.posture = self.session.service("ALRobotPosture")
         self.audio_recorder = self.session.service("ALAudioRecorder")
         self.tts = self.session.service("ALTextToSpeech")
         self.memory = self.session.service("ALMemory")
@@ -109,6 +130,43 @@ class Robot:
             [ 0.5, -0.5,  0.5, -0.5,  0.5, -0.5,  0.0]  # RWristYaw
         ]
         self.motion.angleInterpolation(names, angle_lists, time_lists, is_absolute)
+        return "Waved right hand."
+
+    def get_posture(self):
+        """Returns the robot's current posture family."""
+        return f"Current posture: {self.posture.getPostureFamily()}"
+
+    def sit_down(self):
+        """Makes the robot sit down if not already sitting."""
+        family = self.posture.getPostureFamily()
+        if family == "Sitting":
+            return "Already sitting."
+        self.posture.goToPosture("Sit", 0.8)
+        return "Sat down."
+
+    def stand_up(self):
+        """Makes the robot stand up if not already standing."""
+        family = self.posture.getPostureFamily()
+        if family == "Standing":
+            return "Already standing."
+        self.posture.goToPosture("StandInit", 0.8)
+        return "Stood up."
+
+    def lie_on_stomach(self):
+        """Makes the robot lie down on its stomach if not already lying on belly."""
+        family = self.posture.getPostureFamily()
+        if family == "LyingBelly":
+            return "Already lying on stomach."
+        self.posture.goToPosture("LyingBelly", 0.8)
+        return "Lying on stomach."
+
+    def lie_on_back(self):
+        """Makes the robot lie down on its back if not already lying on back."""
+        family = self.posture.getPostureFamily()
+        if family == "LyingBack":
+            return "Already lying on back."
+        self.posture.goToPosture("LyingBack", 0.8)
+        return "Lying on back."
 
     def start_audio_recording(self):
         """Starts recording audio through the robot's microphones and subscribes
@@ -152,8 +210,10 @@ class Robot:
 
         Args:
             name (str): Action key from Robot.ACTIONS.
+
+        Returns:
+            str: Result message from the action.
         """
         if name in self.ACTIONS:
-            getattr(self, self.ACTIONS[name]["method"])()
-        else:
-            print(f"Unknown action: {name}", file=sys.stderr)
+            return getattr(self, self.ACTIONS[name]["method"])()
+        return f"Unknown action: {name}"

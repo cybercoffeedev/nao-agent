@@ -1,4 +1,4 @@
-import sys, time, paramiko
+import sys, time, json, paramiko
 from robot import Robot
 from asr import RivaASR
 from llm import LLMManager
@@ -53,6 +53,25 @@ class RobotAgent:
             print(f"Error downloading file via SFTP: {e}", file=sys.stderr)
             sys.exit(1)
 
+    def _execute_steps(self, raw: str):
+        """Parses a JSON array of steps from LLM and executes them in order.
+
+        Each step is either {"speak": "text"} or {"action": "name"}.
+        Unknown steps are ignored.
+        """
+        try:
+            steps = json.loads(raw)
+        except json.JSONDecodeError:
+            self.robot.speak(raw)
+            return
+
+        for step in steps:
+            if "speak" in step:
+                self.robot.speak(step["speak"])
+            elif "action" in step:
+                result = self.robot.execute_action(step["action"])
+                self.llm.add_assistant_message(f"[action result: {result}]")
+
     def run(self):
         """Starts the interactive chatbot main loop."""
         self.robot.connect_to_robot()
@@ -66,13 +85,9 @@ class RobotAgent:
                 text = self.asr.transcribe_audio()
                 if text:
                     self.llm.add_user_message(text)
-                    text, actions = self.llm.generate_response()
+                    response = self.llm.generate_response()
                     self.robot.set_eyes(None)
-                    self.robot.speak(text)
-                    for action in actions:
-                        self.robot.execute_action(action)
-
-                self.robot.set_eyes(None)
+                    self._execute_steps(response)
                 time.sleep(1.0)
         except KeyboardInterrupt:
             pass
