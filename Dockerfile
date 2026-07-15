@@ -70,17 +70,11 @@ ENV PYTHONBUFFERED=1
 
 COPY --from=builder /tmp/libqi-python/wheelhouse /tmp/wheelhouse
 
+COPY requirements.txt /tmp/requirements.txt
+
 RUN pip install --no-cache-dir /tmp/wheelhouse/qi-*.whl \
-    && pip install --no-cache-dir \
-        ipykernel \
-        opencv-python-headless \
-        numpy \
-        mediapipe \
-        python-dotenv \
-        paramiko \
-        nvidia-riva-client \
-        openai \
-    && rm -rf /tmp/wheelhouse
+    && pip install --no-cache-dir -r /tmp/requirements.txt \
+    && rm -rf /tmp/wheelhouse /tmp/requirements.txt
 
 WORKDIR /opt/nvidia-riva
 RUN git clone https://github.com/nvidia-riva/python-clients.git

@@ -1,0 +1,6 @@
+numpy
+mediapipe
+python-dotenv
+paramiko
+nvidia-riva-client
+openai
