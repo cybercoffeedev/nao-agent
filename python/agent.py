@@ -65,14 +65,16 @@ class RobotAgent:
         if steps and isinstance(steps, list):
             for s in steps:
                 if "speak" in s:
+                    self.robot.set_eyes(None)
                     self.robot.speak(s["speak"])
         else:
+            self.robot.set_eyes(None)
             self.robot.speak(text)
 
     def _execute_steps(self, raw: str):
         """Parses a JSON array of steps from LLM and executes them in order.
 
-        Each step is either {"speak": "text"} or {"action": "name"}.
+        Each step is either {"speak": "text"} or {"action": "name", "args": [...]}.
         Unknown steps are ignored.
         """
         steps = self._parse_steps(raw)
@@ -81,9 +83,11 @@ class RobotAgent:
 
         for i, step in enumerate(steps):
             if "speak" in step:
+                self.robot.set_eyes(None)
                 self.robot.speak(step["speak"])
             elif "action" in step:
-                result = self.robot.execute_action(step["action"])
+                args = step.get("args", [])
+                result = self.robot.execute_action(step["action"], *args)
                 if not any("speak" in s for s in steps[i+1:]):
                     self.llm.add_message("user", f"[ Action result: {result} ]")
                     self._speak_response(self.llm.generate_response())
@@ -102,7 +106,6 @@ class RobotAgent:
                 if text:
                     self.llm.add_message("user", text)
                     response = self.llm.generate_response()
-                    self.robot.set_eyes(None)
                     self._execute_steps(response)
                 time.sleep(1.0)
         except KeyboardInterrupt:

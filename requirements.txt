@@ -4,3 +4,4 @@ python-dotenv
 paramiko
 nvidia-riva-client
 openai
+ddgs

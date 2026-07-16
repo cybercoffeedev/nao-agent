@@ -100,8 +100,28 @@ class RobotActions:
             cpu_temp = "N/A"
         return f"Battery: {battery}% ({charging_state}), CPU temp: {cpu_temp}°C"
 
-    def execute(self, name: str):
+    @action("Search the internet for information. Use this when you need to find current data, facts, or answers to questions.")
+    def web_search(self, query: str):
+        """Searches the internet using DuckDuckGo."""
+        from ddgs import DDGS
+        try:
+            results = DDGS().text(query, max_results=3)
+            if results:
+                output = []
+                for r in results:
+                    output.append(f"{r['title']}: {r['body']}")
+                return "\n".join(output)
+            return "No results found."
+        except Exception as e:
+            return f"Search error: {e}"
+
+    def execute(self, name: str, *args):
         """Executes a named action."""
         if name in self._actions:
-            return getattr(self, name)()
+            import inspect
+            method = getattr(self, name)
+            params = list(inspect.signature(method).parameters.keys())
+            if len(args) < len(params) - 1:  # -1 for self
+                return f"Action '{name}' requires {len(params) - 1} argument(s): {', '.join(params[1:])}"
+            return method(*args)
         return f"Unknown action: {name}"
