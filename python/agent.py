@@ -85,7 +85,7 @@ class RobotAgent:
             elif "action" in step:
                 result = self.robot.execute_action(step["action"])
                 if not any("speak" in s for s in steps[i+1:]):
-                    self.llm.add_user_message(f"[ Action result: {result} ]")
+                    self.llm.add_message("user", f"[ Action result: {result} ]")
                     self._speak_response(self.llm.generate_response())
 
     def run(self):
@@ -100,7 +100,7 @@ class RobotAgent:
 
                 text = self.asr.transcribe_audio()
                 if text:
-                    self.llm.add_user_message(text)
+                    self.llm.add_message("user", text)
                     response = self.llm.generate_response()
                     self.robot.set_eyes(None)
                     self._execute_steps(response)

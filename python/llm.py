@@ -23,14 +23,14 @@ class LLMManager:
         if len(self.context) > self.max_messages + 1:
             self.context = [self.context[0]] + self.context[-(self.max_messages):]
 
-    def add_user_message(self, text: str):
-        """Appends a new user message to the conversational history context."""
-        self.context.append({"role": "user", "content": text})
-        self._trim_context()
+    def add_message(self, role: str, text: str):
+        """Appends a message to the conversational history context.
 
-    def add_assistant_message(self, text: str):
-        """Appends an assistant message to the conversational history context."""
-        self.context.append({"role": "assistant", "content": text})
+        Args:
+            role (str): Message role - "user" or "assistant".
+            text (str): Message content.
+        """
+        self.context.append({"role": role, "content": text})
         self._trim_context()
 
     def generate_response(self):
