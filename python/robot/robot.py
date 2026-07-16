@@ -48,7 +48,10 @@ class Robot:
         tts = self.session.service("ALTextToSpeech")
 
         self.eyes = RobotEyes(self.session)
-        self.actions = RobotActions(posture, motion, memory, battery)
+        self.background_movement = self.session.service("ALBackgroundMovement")
+        self.listening_movement = self.session.service("ALListeningMovement")
+        self.basic_awareness = self.session.service("ALBasicAwareness")
+        self.actions = RobotActions(posture, motion, memory, battery, self.background_movement, self.listening_movement, self.basic_awareness)
         self.audio = RobotAudio(audio_recorder, speech_reco, memory, self.remote_wav_path)
         self.tts = RobotTTS(tts)
 

@@ -8,11 +8,14 @@ def action(description):
 class RobotActions:
     """Manages robot actions like waving, sitting, standing, etc."""
 
-    def __init__(self, posture, motion, memory, battery):
+    def __init__(self, posture, motion, memory, battery, background_movement, listening_movement, basic_awareness):
         self.posture = posture
         self.motion = motion
         self.memory = memory
         self.battery = battery
+        self.background_movement = background_movement
+        self.listening_movement = listening_movement
+        self.basic_awareness = basic_awareness
         self._actions = {
             name: method._action_description
             for name, method in self.__class__.__dict__.items()
@@ -39,11 +42,18 @@ class RobotActions:
     def get_posture(self):
         return f"Current posture: {self.posture.getPostureFamily()}"
 
+    def _set_autonomous_moves(self, enabled: bool):
+        """Enable or disable all autonomous movement services."""
+        self.background_movement.setEnabled(enabled)
+        self.listening_movement.setEnabled(enabled)
+        self.basic_awareness.setEnabled(enabled)
+
     @action("Make the robot sit down.")
     def sit_down(self):
         family = self.posture.getPostureFamily()
         if family == "Sitting":
             return "Already sitting."
+        self._set_autonomous_moves(True)
         self.posture.goToPosture("Sit", 0.8)
         return "Sat down."
 
@@ -52,6 +62,7 @@ class RobotActions:
         family = self.posture.getPostureFamily()
         if family == "Standing":
             return "Already standing."
+        self._set_autonomous_moves(True)
         self.posture.goToPosture("StandInit", 0.8)
         return "Stood up."
 
@@ -60,6 +71,7 @@ class RobotActions:
         family = self.posture.getPostureFamily()
         if family == "LyingBelly":
             return "Already lying on stomach."
+        self._set_autonomous_moves(False)
         self.posture.goToPosture("LyingBelly", 0.8)
         return "Lying on stomach."
 
@@ -68,6 +80,7 @@ class RobotActions:
         family = self.posture.getPostureFamily()
         if family == "LyingBack":
             return "Already lying on back."
+        self._set_autonomous_moves(False)
         self.posture.goToPosture("LyingBack", 0.8)
         return "Lying on back."
 
