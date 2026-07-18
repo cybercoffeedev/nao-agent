@@ -1,8 +1,16 @@
 {
     "name": "nao-devcontainer",
     "build": {
-        "dockerfile": "../Dockerfile"
+        "dockerfile": "../Dockerfile",
+        "args": {
+            "USERNAME": "dev",
+            "USER_UID": "1000",
+            "USER_GID": "1000"
+        }
     },
+    "remoteUser": "dev",
+    "workspaceMount": "source=${localWorkspaceFolder},target=/home/nao-agent,type=bind",
+    "workspaceFolder": "/home/nao-agent",
     "customizations": {
         "vscode": {
             "extensions": [

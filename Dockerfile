@@ -55,15 +55,17 @@ RUN auditwheel repair \
 # dev configuration
 FROM python:3.13-slim as dev
 
-RUN apt-get update && apt-get install -y \
-    libxcb1 \
-    libx11-6 \
-    libxext6 \
-    libxrender1 \
-    libgl1 \
-    libglib2.0-0 \
-    libgles2-mesa-dev \
-    git \
+ARG USERNAME=dev
+ARG USER_UID=1000
+ARG USER_GID=$USER_UID
+
+RUN groupadd --gid $USER_GID $USERNAME \
+    && useradd --uid $USER_UID --gid $USER_GID -m $USERNAME -s /bin/bash \
+    && apt-get update \
+    && apt-get install -y sudo \
+    && echo "$USERNAME ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/$USERNAME \
+    && chmod 0440 /etc/sudoers.d/$USERNAME \
+    && apt-get install -y git \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 ENV PYTHONBUFFERED=1
@@ -76,8 +78,6 @@ RUN pip install --no-cache-dir /tmp/wheelhouse/qi-*.whl \
     && pip install --no-cache-dir -r /tmp/requirements.txt \
     && rm -rf /tmp/wheelhouse /tmp/requirements.txt
 
-WORKDIR /opt/nvidia-riva
-RUN git clone https://github.com/nvidia-riva/python-clients.git
-
-WORKDIR /workspaces/nao
+USER $USERNAME
+WORKDIR /home/nao-agent
 CMD ["/bin/bash"]
