@@ -5,7 +5,7 @@ logger = logging.getLogger(__name__)
 
 class LLMManager:
     """Manages LLM conversations via an OpenAI-compatible API."""
-    def __init__(self, api_key: str, url: str, model: str, system_msg: str, max_messages: int = 8):
+    def __init__(self, api_key: str, url: str, model: str, system_msg: str, max_turns: int = 8):
         """Initializes the LLM manager with API credentials and system prompt.
 
         Args:
@@ -13,17 +13,31 @@ class LLMManager:
             url (str): Base URL for the OpenAI client.
             model (str): The LLM model name to call.
             system_msg (str): System prompt outlining the assistant's behavior/instructions.
-            max_messages (int): Maximum number of recent messages to keep in context.
+            max_turns (int): Maximum number of recent user turns to keep in context.
         """
         self.model = model
         self.client = OpenAI(base_url=url, api_key=api_key)
-        self.max_messages = max_messages
+        self.max_turns = max_turns
         self.context = [{"role": "system", "content": system_msg}]
 
     def _trim_context(self):
-        """Trims context to keep only system message + max_messages recent messages."""
-        if len(self.context) > self.max_messages + 1:
-            self.context = [self.context[0]] + self.context[-(self.max_messages):]
+        """Trims context to keep only system message + last N complete turns.
+
+        A turn starts at a user message and includes everything until the
+        next user message (assistant replies, tool calls, tool results).
+        """
+        user_count = sum(1 for m in self.context if m.get("role") == "user")
+        if user_count <= self.max_turns:
+            return
+
+        count = 0
+        cutoff = user_count - self.max_turns + 1
+        for i, msg in enumerate(self.context):
+            if msg.get("role") == "user":
+                count += 1
+                if count == cutoff:
+                    self.context = [self.context[0]] + self.context[i:]
+                    return
 
     def add_message(self, role: str, text: str):
         """Appends a message to the conversational history context.
