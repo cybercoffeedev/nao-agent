@@ -1,4 +1,4 @@
-import sys, time, json, re
+import time, json, re
 import logging
 import paramiko
 from robot import Robot
@@ -47,8 +47,7 @@ class RobotAgent:
                 with ssh.open_sftp() as sftp:
                     sftp.get(self.robot.remote_wav_path, self.robot.local_wav_path)
         except Exception as e:
-            logger.error("Error downloading file via SFTP: %s", e)
-            sys.exit(1)
+            raise RuntimeError(f"SFTP download failed: {e}") from e
 
     def _parse_steps(self, raw: str):
         """Parses JSON array from LLM response, handling malformed output."""

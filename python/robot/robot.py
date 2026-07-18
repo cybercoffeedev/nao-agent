@@ -1,4 +1,3 @@
-import sys
 import logging
 import qi
 from .eyes import RobotEyes
@@ -40,8 +39,7 @@ class Robot:
         try:
             self.session.connect(f"tcp://{self.ip}:{self.port}")
         except Exception as e:
-            logger.error("Failed connecting to robot: %s", e)
-            sys.exit(1)
+            raise ConnectionError(f"Failed connecting to robot: {e}") from e
 
         posture = self.session.service("ALRobotPosture")
         motion = self.session.service("ALMotion")
