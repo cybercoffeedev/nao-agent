@@ -1,5 +1,8 @@
-import os, sys, wave
+import os, wave
+import logging
 import riva.client
+
+logger = logging.getLogger(__name__)
 
 class RivaASR:
     """Speech recognition using NVIDIA Riva ASR gRPC service."""
@@ -29,7 +32,7 @@ class RivaASR:
                 channels = wav.getnchannels()
                 audio_data = wav.readframes(wav.getnframes())
         except Exception as e:
-            print(f"Error reading WAV file: {e}", file=sys.stderr)
+            logger.error("Error reading WAV file: %s", e)
             return None
 
         config = riva.client.RecognitionConfig(
@@ -45,6 +48,6 @@ class RivaASR:
             response = riva.client.ASRService(self.auth).offline_recognize(audio_data, config)
             return "".join(r.alternatives[0].transcript for r in response.results)
         except Exception as e:
-            print(f"Riva ASR error: {e}", file=sys.stderr)
+            logger.error("Riva ASR error: %s", e)
         finally:
             os.remove(self.local_wav_path)

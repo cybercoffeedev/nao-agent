@@ -1,9 +1,12 @@
-import os, sys
+import os
+import logging
 from dotenv import load_dotenv
 from robot import Robot
 from agent import RobotAgent
 from asr import RivaASR
 from llm import LLMManager
+
+logger = logging.getLogger(__name__)
 
 def load_system_prompt():
     """Reads the system prompt/instruction from data/system_msg.txt.
@@ -14,7 +17,7 @@ def load_system_prompt():
     try:
         return open("data/system_msg.txt").read()
     except FileNotFoundError:
-        print("data/system_msg.txt not found", file=sys.stderr)
+        logger.error("data/system_msg.txt not found")
         return ""
 
 def main():
@@ -22,6 +25,7 @@ def main():
     initializes the robot connection, speech recognizer, LLM context, and starts
     the chatbot agent.
     """
+    logging.basicConfig(level=logging.INFO, format="%(name)s: %(message)s")
     load_dotenv()
 
     robot = Robot(

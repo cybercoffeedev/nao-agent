@@ -1,8 +1,12 @@
-import sys, qi
+import sys
+import logging
+import qi
 from .eyes import RobotEyes
 from .actions import RobotActions
 from .audio import RobotAudio
 from .tts import RobotTTS
+
+logger = logging.getLogger(__name__)
 
 class Robot:
     """Main robot class that manages connection and delegates to submodules."""
@@ -36,7 +40,7 @@ class Robot:
         try:
             self.session.connect(f"tcp://{self.ip}:{self.port}")
         except Exception as e:
-            print(f"Failed connecting to robot: {e}", file=sys.stderr)
+            logger.error("Failed connecting to robot: %s", e)
             sys.exit(1)
 
         posture = self.session.service("ALRobotPosture")

@@ -1,5 +1,7 @@
-import sys
+import logging
 from openai import OpenAI
+
+logger = logging.getLogger(__name__)
 
 class LLMManager:
     """Manages LLM conversations via an OpenAI-compatible API."""
@@ -47,5 +49,5 @@ class LLMManager:
             self._trim_context()
             return text
         except Exception as e:
-            print(f"Couldn't generate a message: {e}", file=sys.stderr)
+            logger.error("Couldn't generate a message: %s", e)
             return ""

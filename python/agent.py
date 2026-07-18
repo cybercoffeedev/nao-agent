@@ -1,7 +1,11 @@
-import sys, time, json, re, paramiko
+import sys, time, json, re
+import logging
+import paramiko
 from robot import Robot
 from asr import RivaASR
 from llm import LLMManager
+
+logger = logging.getLogger(__name__)
 
 class RobotAgent:
     """Central orchestrator for the voice-based chatbot loop."""
@@ -43,7 +47,7 @@ class RobotAgent:
                 with ssh.open_sftp() as sftp:
                     sftp.get(self.robot.remote_wav_path, self.robot.local_wav_path)
         except Exception as e:
-            print(f"Error downloading file via SFTP: {e}", file=sys.stderr)
+            logger.error("Error downloading file via SFTP: %s", e)
             sys.exit(1)
 
     def _parse_steps(self, raw: str):

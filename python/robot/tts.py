@@ -1,4 +1,6 @@
-import sys
+import logging
+
+logger = logging.getLogger(__name__)
 
 class RobotTTS:
     """Manages robot text-to-speech."""
@@ -21,4 +23,4 @@ class RobotTTS:
         try:
             self.tts.say(text)
         except Exception as e:
-            print(f"Couldn't say the message: {e}", file=sys.stderr)
+            logger.error("Couldn't say the message: %s", e)
