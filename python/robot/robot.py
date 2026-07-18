@@ -70,6 +70,6 @@ class Robot:
         """Says provided message with built-in TTS."""
         self.tts.speak(text)
 
-    def execute_action(self, name: str, *args):
+    def execute_action(self, name: str, *args, **kwargs):
         """Executes a named action from the ACTIONS registry."""
-        return self.actions.execute(name, *args)
+        return self.actions.execute(name, *args, **kwargs)

@@ -35,19 +35,61 @@ class LLMManager:
         self.context.append({"role": role, "content": text})
         self._trim_context()
 
-    def generate_response(self):
-        """Generates a text response from the LLM model."""
+    def add_tool_result(self, tool_call_id: str, content: str):
+        """Appends a tool result message to the conversational history.
+
+        Args:
+            tool_call_id (str): The ID of the tool call this result responds to.
+            content (str): The result content from the tool execution.
+        """
+        self.context.append({
+            "role": "tool",
+            "tool_call_id": tool_call_id,
+            "content": content,
+        })
+        self._trim_context()
+
+    def generate_response(self, tools=None):
+        """Generates a response from the LLM model.
+
+        Args:
+            tools: Optional list of OpenAI function tool schemas.
+
+        Returns:
+            ChatCompletionMessage with .content and .tool_calls attributes.
+        """
         try:
-            completion = self.client.chat.completions.create(
-                model=self.model,
-                messages=self.context,
-                stream=False,
-                max_tokens=8192,
-            )
-            text = completion.choices[0].message.content or ""
-            self.context.append({"role": "assistant", "content": text})
+            kwargs = {
+                "model": self.model,
+                "messages": self.context,
+                "stream": False,
+                "max_tokens": 8192,
+            }
+            if tools:
+                kwargs["tools"] = tools
+
+            completion = self.client.chat.completions.create(**kwargs)
+            message = completion.choices[0].message
+
+            assistant_msg = {"role": "assistant"}
+            if message.content:
+                assistant_msg["content"] = message.content
+            if message.tool_calls:
+                assistant_msg["tool_calls"] = [
+                    {
+                        "id": tc.id,
+                        "type": "function",
+                        "function": {
+                            "name": tc.function.name,
+                            "arguments": tc.function.arguments,
+                        },
+                    }
+                    for tc in message.tool_calls
+                ]
+
+            self.context.append(assistant_msg)
             self._trim_context()
-            return text
+            return message
         except Exception as e:
             logger.error("Couldn't generate a message: %s", e)
-            return ""
+            return type("EmptyMessage", (), {"content": "", "tool_calls": None})()

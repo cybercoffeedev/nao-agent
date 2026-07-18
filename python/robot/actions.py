@@ -1,3 +1,6 @@
+import inspect
+
+
 def action(description):
     """Decorator that registers a method as an available robot action."""
     def decorator(func):
@@ -21,6 +24,34 @@ class RobotActions:
             for name, method in self.__class__.__dict__.items()
             if callable(method) and hasattr(method, "_action_description")
         }
+
+    def get_tool_schemas(self):
+        """Generate OpenAI function schemas for all registered actions."""
+        tools = []
+        for name, description in self._actions.items():
+            method = getattr(self, name)
+            sig = inspect.signature(method)
+            params = list(sig.parameters.keys())[1:]
+
+            properties = {}
+            required = []
+            for param_name in params:
+                properties[param_name] = {"type": "string"}
+                required.append(param_name)
+
+            tools.append({
+                "type": "function",
+                "function": {
+                    "name": name,
+                    "description": description,
+                    "parameters": {
+                        "type": "object",
+                        "properties": properties,
+                        "required": required,
+                    },
+                },
+            })
+        return tools
 
     @action("Wave your right hand in greeting.")
     def wave_right_hand(self):
@@ -115,11 +146,12 @@ class RobotActions:
         except Exception as e:
             return f"Search error: {e}"
 
-    def execute(self, name: str, *args):
+    def execute(self, name: str, *args, **kwargs):
         """Executes a named action."""
         if name in self._actions:
-            import inspect
             method = getattr(self, name)
+            if kwargs:
+                return method(**kwargs)
             params = list(inspect.signature(method).parameters.keys())
             if len(args) < len(params) - 1:  # -1 for self
                 return f"Action '{name}' requires {len(params) - 1} argument(s): {', '.join(params[1:])}"
