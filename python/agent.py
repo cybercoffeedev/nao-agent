@@ -54,12 +54,17 @@ class RobotAgent:
 
         Keeps looping as long as the model returns tool calls, executing
         each tool and feeding results back. Stops when the model returns
-        a text response.
+        a text response or max iterations is reached.
         """
         response = self.llm.generate_response(tools)
 
-        while response.tool_calls:
-            for tc in response.tool_calls:
+        for _ in range(5):
+            tool_calls = response.tool_calls
+
+            if not tool_calls:
+                break
+
+            for tc in tool_calls:
                 args = json.loads(tc.function.arguments)
                 logger.info("Executing tool: %s(%s)", tc.function.name, args)
                 result = self.robot.execute_action(tc.function.name, **args)
@@ -67,6 +72,8 @@ class RobotAgent:
 
             self.robot.set_eyes("thinking")
             response = self.llm.generate_response(tools)
+        else:
+            logger.warning("Max tool call iterations reached")
 
         if response.content:
             self.robot.set_eyes(None)
