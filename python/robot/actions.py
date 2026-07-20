@@ -11,14 +11,14 @@ def action(description):
 class RobotActions:
     """Manages robot actions like waving, sitting, standing, etc."""
 
-    def __init__(self, posture, motion, memory, battery, background_movement, listening_movement, basic_awareness):
-        self.posture = posture
-        self.motion = motion
-        self.memory = memory
-        self.battery = battery
-        self.background_movement = background_movement
-        self.listening_movement = listening_movement
-        self.basic_awareness = basic_awareness
+    def __init__(self, session):
+        self.posture = session.service("ALRobotPosture")
+        self.motion = session.service("ALMotion")
+        self.memory = session.service("ALMemory")
+        self.battery = session.service("ALBattery")
+        self.background_movement = session.service("ALBackgroundMovement")
+        self.listening_movement = session.service("ALListeningMovement")
+        self.basic_awareness = session.service("ALBasicAwareness")
         self._actions = {
             name: method._action_description
             for name, method in self.__class__.__dict__.items()

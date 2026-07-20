@@ -41,19 +41,13 @@ class Robot:
         except Exception as e:
             raise ConnectionError(f"Failed connecting to robot: {e}") from e
 
-        posture = self.session.service("ALRobotPosture")
-        motion = self.session.service("ALMotion")
         memory = self.session.service("ALMemory")
-        battery = self.session.service("ALBattery")
         audio_recorder = self.session.service("ALAudioRecorder")
         speech_reco = self.session.service("ALSpeechRecognition")
         tts = self.session.service("ALTextToSpeech")
 
         self.eyes = RobotEyes(self.session)
-        self.background_movement = self.session.service("ALBackgroundMovement")
-        self.listening_movement = self.session.service("ALListeningMovement")
-        self.basic_awareness = self.session.service("ALBasicAwareness")
-        self.actions = RobotActions(posture, motion, memory, battery, self.background_movement, self.listening_movement, self.basic_awareness)
+        self.actions = RobotActions(self.session)
         self.audio = RobotAudio(audio_recorder, speech_reco, memory, self.remote_wav_path,
                                 ssh_host=self.ip, ssh_username=self.username, ssh_password=self.password)
         self.tts = RobotTTS(tts)
