@@ -153,7 +153,7 @@ class RobotActions:
             if kwargs:
                 return method(**kwargs)
             params = list(inspect.signature(method).parameters.keys())
-            if len(args) < len(params) - 1:  # -1 for self
-                return f"Action '{name}' requires {len(params) - 1} argument(s): {', '.join(params[1:])}"
+            if len(args) < len(params):
+                return f"Action '{name}' requires {len(params)} argument(s): {', '.join(params)}"
             return method(*args)
         return f"Unknown action: {name}"
