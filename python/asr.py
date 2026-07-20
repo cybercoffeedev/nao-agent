@@ -24,7 +24,15 @@ class RivaASR:
             ]
         )
 
-    def transcribe_audio(self):
+    def _cleanup(self):
+        """Safely removes the local WAV file if it exists."""
+        try:
+            if os.path.exists(self.local_wav_path):
+                os.remove(self.local_wav_path)
+        except OSError as e:
+            logger.warning("Could not remove WAV file: %s", e)
+
+    def transcribe_audio(self) -> str:
         """Sends the audio file to Riva ASR and returns the recognized text."""
         try:
             with wave.open(self.local_wav_path, 'rb') as wav:
@@ -33,7 +41,8 @@ class RivaASR:
                 audio_data = wav.readframes(wav.getnframes())
         except Exception as e:
             logger.error("Error reading WAV file: %s", e)
-            return None
+            self._cleanup()
+            return ""
 
         config = riva.client.RecognitionConfig(
             encoding=riva.client.AudioEncoding.LINEAR_PCM,
@@ -49,5 +58,6 @@ class RivaASR:
             return "".join(r.alternatives[0].transcript for r in response.results)
         except Exception as e:
             logger.error("Riva ASR error: %s", e)
+            return ""
         finally:
-            os.remove(self.local_wav_path)
+            self._cleanup()
