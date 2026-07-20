@@ -1,11 +1,14 @@
 import time, json
 import logging
+from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeoutError
 import paramiko
 from robot import Robot
 from asr import RivaASR
 from llm import LLMManager
 
 logger = logging.getLogger(__name__)
+
+TOOL_TIMEOUT = 30
 
 class RobotAgent:
     """Central orchestrator for the voice-based chatbot loop."""
@@ -80,7 +83,16 @@ class RobotAgent:
             for tc in tool_calls:
                 args = json.loads(tc.function.arguments)
                 logger.info("Executing tool: %s(%s)", tc.function.name, args)
-                result = self.robot.execute_action(tc.function.name, **args)
+                try:
+                    with ThreadPoolExecutor(max_workers=1) as executor:
+                        future = executor.submit(self.robot.execute_action, tc.function.name, **args)
+                        result = future.result(timeout=TOOL_TIMEOUT)
+                except FuturesTimeoutError:
+                    result = f"Tool '{tc.function.name}' timed out after {TOOL_TIMEOUT}s"
+                    logger.warning(result)
+                except Exception as e:
+                    result = f"Tool '{tc.function.name}' failed: {e}"
+                    logger.error(result)
                 self.llm.add_tool_result(tc.id, str(result))
 
             self.robot.set_eyes("thinking")
