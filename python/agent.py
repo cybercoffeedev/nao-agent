@@ -64,13 +64,12 @@ class RobotAgent:
         response = self.llm.generate_response(tools)
 
         for _ in range(5):
-            if response.content:
-                self.robot.set_eyes(None)
-                self.robot.speak(response.content)
-
             tool_calls = response.tool_calls
 
             if not tool_calls:
+                if response.content:
+                    self.robot.set_eyes(None)
+                    self.robot.speak(response.content)
                 break
 
             for tc in tool_calls:
