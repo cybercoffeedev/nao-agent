@@ -31,7 +31,7 @@ class RobotActions:
         for name, description in self._actions.items():
             method = getattr(self, name)
             sig = inspect.signature(method)
-            params = list(sig.parameters.keys())[1:]
+            params = list(sig.parameters.keys())
 
             properties = {}
             required = []
