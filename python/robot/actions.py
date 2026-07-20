@@ -44,10 +44,12 @@ class RobotActions:
                 "function": {
                     "name": name,
                     "description": description,
+                    "strict": True,
                     "parameters": {
                         "type": "object",
                         "properties": properties,
                         "required": required,
+                        "additionalProperties": False,
                     },
                 },
             })
