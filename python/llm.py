@@ -16,7 +16,7 @@ class LLMManager:
             max_turns (int): Maximum number of recent user turns to keep in context.
         """
         self.model = model
-        self.client = OpenAI(base_url=url, api_key=api_key)
+        self.client = OpenAI(base_url=url, api_key=api_key, timeout=30.0)
         self.max_turns = max_turns
         self.context = [{"role": "system", "content": system_msg}]
 

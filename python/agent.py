@@ -14,15 +14,20 @@ class RobotAgent:
         self.asr = asr
         self.llm = llm
 
-    def listen_for_speech(self):
+    def listen_for_speech(self, timeout=30):
         """Monitors speech detection, activates eye animations,
         and records audio until silence threshold is reached.
         """
         speech_started = False
         silence_start = None
+        start = time.time()
 
         self.robot.audio.start_recording()
         while True:
+            if time.time() - start >= timeout:
+                logger.warning("Speech detection timed out")
+                self.robot.set_eyes(None)
+                break
             speaking = self.robot.audio.is_speech_detected()
             if speaking:
                 if not speech_started:
@@ -59,6 +64,10 @@ class RobotAgent:
         response = self.llm.generate_response(tools)
 
         for _ in range(5):
+            if response.content:
+                self.robot.set_eyes(None)
+                self.robot.speak(response.content)
+
             tool_calls = response.tool_calls
 
             if not tool_calls:
@@ -75,10 +84,6 @@ class RobotAgent:
         else:
             logger.warning("Max tool call iterations reached")
 
-        if response.content:
-            self.robot.set_eyes(None)
-            self.robot.speak(response.content)
-
     def run(self):
         """Starts the interactive chatbot main loop."""
         self.robot.connect_to_robot()
@@ -86,7 +91,7 @@ class RobotAgent:
 
         try:
             while True:
-                self.listen_for_speech()
+                self.listen_for_speech(timeout=30)
                 self.download_audio_from_robot()
                 self.robot.set_eyes("thinking")
 

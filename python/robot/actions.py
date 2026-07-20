@@ -136,7 +136,7 @@ class RobotActions:
         """Searches the internet using DuckDuckGo."""
         from ddgs import DDGS
         try:
-            results = DDGS().text(query, max_results=3)
+            results = DDGS(timeout=10).text(query, max_results=3)
             if results:
                 output = []
                 for r in results:
