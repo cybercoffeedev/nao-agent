@@ -85,6 +85,10 @@ class LLMManager:
             completion = self.client.chat.completions.create(**kwargs)
             message = completion.choices[0].message
 
+            logger.debug("LLM response - content: %s, tool_calls: %s",
+                         message.content[:200] if message.content else None,
+                         bool(message.tool_calls))
+
             assistant_msg = {"role": "assistant"}
             if message.content:
                 assistant_msg["content"] = message.content
