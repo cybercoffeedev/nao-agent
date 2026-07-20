@@ -1,6 +1,6 @@
-import os
 import logging
 from dotenv import load_dotenv
+from config import Config
 from robot import Robot
 from agent import RobotAgent
 from asr import RivaASR
@@ -9,42 +9,38 @@ from llm import LLMManager
 logger = logging.getLogger(__name__)
 
 def load_system_prompt():
-    """Reads the system prompt/instruction from data/system_msg.txt.
-    
-    Returns:
-        str: The system message content, or an empty string if the file is not found.
-    """
+    """Reads the system prompt/instruction from data/system_msg.txt."""
     try:
-        return open("data/system_msg.txt").read()
+        with open("data/system_msg.txt") as f:
+            return f.read()
     except FileNotFoundError:
         logger.error("data/system_msg.txt not found")
         return ""
 
 def main():
-    """Main entry point of the application. Loads configuration from .env,
-    initializes the robot connection, speech recognizer, LLM context, and starts
-    the chatbot agent.
-    """
+    """Main entry point of the application."""
     logging.basicConfig(level=logging.INFO, format="%(name)s: %(message)s")
     load_dotenv()
 
+    config = Config.from_env()
+
     robot = Robot(
-        ip=os.environ["ROBOT_IP"],
-        port=int(os.getenv("ROBOT_PORT", 9559)),
-        username=os.getenv("ROBOT_USERNAME", "nao"),
-        password=os.getenv("ROBOT_PASSWORD", "nao"),
-        remote_wav_path="/home/nao/capture.wav",
-        local_wav_path="./capture.wav"
+        ip=config.robot_ip,
+        port=config.robot_port,
+        username=config.robot_username,
+        password=config.robot_password,
+        remote_wav_path=config.remote_wav_path,
+        local_wav_path=config.local_wav_path,
     )
     asr = RivaASR(
-        api_key=os.environ["NVIDIA_API_KEY"],
-        function_id=os.environ["ASR_FUNCTION_ID"],
-        local_wav_path="./capture.wav",
+        api_key=config.nvidia_api_key,
+        function_id=config.asr_function_id,
+        local_wav_path=config.local_wav_path,
     )
     llm = LLMManager(
-        api_key=os.environ["NVIDIA_API_KEY"],
-        url=os.environ["OPENAI_BASE_URL"],
-        model=os.environ["MODEL"],
+        api_key=config.nvidia_api_key,
+        url=config.openai_base_url,
+        model=config.model,
         system_msg=load_system_prompt(),
     )
 
