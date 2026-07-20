@@ -111,4 +111,6 @@ class RobotAgent:
                     self._process_response(tools)
                 time.sleep(1.0)
         except KeyboardInterrupt:
-            pass
+            logger.info("Shutting down...")
+        finally:
+            self.robot.disconnect()

@@ -73,3 +73,16 @@ class Robot:
     def execute_action(self, name: str, *args, **kwargs):
         """Executes a named action from the ACTIONS registry."""
         return self.actions.execute(name, *args, **kwargs)
+
+    def disconnect(self):
+        """Resets robot state and closes the session."""
+        try:
+            if self.eyes:
+                self.eyes.set(None)
+        except Exception as e:
+            logger.warning("Error resetting eyes: %s", e)
+        try:
+            if self.session:
+                self.session.close()
+        except Exception as e:
+            logger.warning("Error closing session: %s", e)
