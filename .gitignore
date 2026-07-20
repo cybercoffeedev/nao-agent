@@ -1,5 +1,6 @@
 .env
 data/
 models/
+logs/
 python/__pycache__
 python/*/__pycache__
