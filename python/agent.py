@@ -1,7 +1,6 @@
 import time, json
 import logging
 from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeoutError
-import paramiko
 from robot import Robot
 from asr import RivaASR
 from llm import LLMManager
@@ -45,17 +44,6 @@ class RobotAgent:
                     break
             time.sleep(0.1)
         self.robot.audio.stop_recording()
-
-    def download_audio_from_robot(self):
-        """Download the audio file from the robot via SFTP."""
-        try:
-            with paramiko.SSHClient() as ssh:
-                ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-                ssh.connect(self.robot.ip, port=22, username=self.robot.username, password=self.robot.password)
-                with ssh.open_sftp() as sftp:
-                    sftp.get(self.robot.remote_wav_path, self.robot.local_wav_path)
-        except Exception as e:
-            raise RuntimeError(f"SFTP download failed: {e}") from e
 
     def _process_response(self, tools):
         """Process LLM response, executing tool calls and speaking results.
@@ -114,7 +102,7 @@ class RobotAgent:
         try:
             while True:
                 self.listen_for_speech(timeout=30)
-                self.download_audio_from_robot()
+                self.robot.audio.download_audio(self.robot.local_wav_path)
                 self.robot.set_eyes("thinking")
 
                 text = self.asr.transcribe_audio()

@@ -54,7 +54,8 @@ class Robot:
         self.listening_movement = self.session.service("ALListeningMovement")
         self.basic_awareness = self.session.service("ALBasicAwareness")
         self.actions = RobotActions(posture, motion, memory, battery, self.background_movement, self.listening_movement, self.basic_awareness)
-        self.audio = RobotAudio(audio_recorder, speech_reco, memory, self.remote_wav_path)
+        self.audio = RobotAudio(audio_recorder, speech_reco, memory, self.remote_wav_path,
+                                ssh_host=self.ip, ssh_username=self.username, ssh_password=self.password)
         self.tts = RobotTTS(tts)
 
         speech_reco.setLanguage("Polish")
