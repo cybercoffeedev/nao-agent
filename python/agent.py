@@ -61,16 +61,21 @@ class RobotAgent:
         each tool and feeding results back. Stops when the model returns
         a text response or max iterations is reached.
         """
-        response = self.llm.generate_response(tools)
+        try:
+            response = self.llm.generate_response(tools)
+        except Exception as e:
+            logger.error("LLM request failed: %s", e)
+            self.robot.set_eyes(None)
+            return
 
         for _ in range(5):
             tool_calls = response.tool_calls
 
             if not tool_calls:
+                self.robot.set_eyes(None)
                 if response.content:
-                    self.robot.set_eyes(None)
                     self.robot.speak(response.content)
-                break
+                return
 
             for tc in tool_calls:
                 args = json.loads(tc.function.arguments)
@@ -79,9 +84,15 @@ class RobotAgent:
                 self.llm.add_tool_result(tc.id, str(result))
 
             self.robot.set_eyes("thinking")
-            response = self.llm.generate_response(tools)
+            try:
+                response = self.llm.generate_response(tools)
+            except Exception as e:
+                logger.error("LLM request failed: %s", e)
+                self.robot.set_eyes(None)
+                return
         else:
             logger.warning("Max tool call iterations reached")
+            self.robot.set_eyes(None)
 
     def run(self):
         """Starts the interactive chatbot main loop."""

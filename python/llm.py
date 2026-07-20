@@ -110,4 +110,4 @@ class LLMManager:
             return message
         except Exception as e:
             logger.error("Couldn't generate a message: %s", e)
-            return type("EmptyMessage", (), {"content": "", "tool_calls": None})()
+            raise
