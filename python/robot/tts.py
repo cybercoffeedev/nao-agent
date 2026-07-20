@@ -14,12 +14,7 @@ class RobotTTS:
         self.tts = tts
 
     def speak(self, text: str):
-        """Says provided message with built-in TTS.
-
-        Args:
-            text (str): The text message to speak.
-        """
-        self.tts.setLanguage("Polish")
+        """Says provided message with built-in TTS."""
         try:
             self.tts.say(text)
         except Exception as e:

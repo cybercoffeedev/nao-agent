@@ -68,7 +68,7 @@ RUN groupadd --gid $USER_GID $USERNAME \
     && apt-get install -y git \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
-ENV PYTHONBUFFERED=1
+ENV PYTHONUNBUFFERED=1
 
 COPY --from=builder /tmp/libqi-python/wheelhouse /tmp/wheelhouse
 
