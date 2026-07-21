@@ -2,7 +2,6 @@
 
 import logging
 from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeoutError
-from typing import Any
 
 from .llm import LLMManager
 from .response_parser import ResponseParser
@@ -49,23 +48,31 @@ class StepExecutor:
                 future = executor.submit(
                     self.robot.execute_action, action_name, **action_args
                 )
-                return future.result(timeout=TOOL_TIMEOUT)
-        except FuturesTimeoutError:
-            result = f"Timeout after {TOOL_TIMEOUT}s"
-            logger.warning(result)
-            return result
+                try:
+                    return future.result(timeout=TOOL_TIMEOUT)
+                except FuturesTimeoutError:
+                    future.cancel()
+                    result = f"Timeout after {TOOL_TIMEOUT}s"
+                    logger.warning(result)
+                    return result
         except Exception as e:
             result = f"Error: {e}"
             logger.error(result)
             return result
 
-    def _speak_response(self, raw: str) -> None:
-        """Extract and speak text from LLM response without executing actions."""
-        speak_text = self.parser.extract_speak_text(raw)
-        if speak_text:
-            self.robot.set_eyes(None)
-            self.robot.speak(speak_text)
-            return
+    def _speak_response(self, steps: list[dict] | None, raw: str) -> None:
+        """Extract and speak text from LLM response without executing actions.
+
+        Args:
+            steps: Already parsed steps (to avoid double parsing).
+            raw: Raw LLM response text for fallback cleaning.
+        """
+        if steps:
+            for step in steps:
+                if "speak" in step:
+                    self.robot.set_eyes(None)
+                    self.robot.speak(step["speak"])
+                    return
 
         cleaned = self.parser.clean_for_tts(raw)
         if cleaned:
@@ -113,4 +120,5 @@ class StepExecutor:
             response = self.llm.generate_response()
             logger.info("LLM: %s", response[:200] if response else "")
             if response:
-                self._speak_response(response)
+                response_steps = self.parser.parse_steps(response)
+                self._speak_response(response_steps, response)

@@ -1,7 +1,6 @@
 """Manages robot audio recording, speech recognition and file transfer."""
 
 import logging
-import wave
 from typing import Any
 
 import paramiko
@@ -60,8 +59,14 @@ class RobotAudio:
 
     def stop_recording(self) -> None:
         """Stop recording and unsubscribe from speech detection."""
-        self.audio_recorder.stopMicrophonesRecording()
-        self.speech_reco.unsubscribe("SpeechDetector")
+        try:
+            self.audio_recorder.stopMicrophonesRecording()
+        except Exception as e:
+            logger.debug("Error stopping recording: %s", e)
+        try:
+            self.speech_reco.unsubscribe("SpeechDetector")
+        except Exception as e:
+            logger.debug("Error unsubscribing from speech: %s", e)
 
     def is_speech_detected(self) -> bool:
         """Check if speech is currently detected."""

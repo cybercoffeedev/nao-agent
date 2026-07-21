@@ -1,10 +1,13 @@
 """Manages the NAO robot's face LED animations using ALLeds service."""
 
+import threading
+
 import qi
 
 LED_UPDATE_PERIOD_US: int = 100_000
 FACE_LEDS_COUNT: int = 8
 SPEAK_HEX_YELLOW: int = 0x0000FFFF
+LED_INTENSITIES: tuple[float, ...] = (1.0, 0.6, 0.2, 0.0)
 
 
 class RobotEyes:
@@ -22,20 +25,26 @@ class RobotEyes:
         self.task = qi.PeriodicTask()
         self.task.setCallback(self._tick)
         self.task.setUsPeriod(LED_UPDATE_PERIOD_US)
+        self._lock = threading.Lock()
         self.mode: str | None = None
         self.step: int = 0
+        self._running: bool = False
 
     def _tick(self) -> None:
         """Callback step executed periodically by qi.PeriodicTask to update LEDs."""
         try:
-            if self.mode == "listening":
+            with self._lock:
+                mode = self.mode
+                step = self.step
+            if mode == "listening":
                 self.leds.fadeRGB("FaceLeds", SPEAK_HEX_YELLOW, 0.0)
-            elif self.mode == "thinking":
-                for i, intensity in enumerate((1.0, 0.6, 0.2, 0.0)):
+            elif mode == "thinking":
+                for i, intensity in enumerate(LED_INTENSITIES):
                     self.leds.setIntensity(
-                        self.leds_list[(self.step - i) % FACE_LEDS_COUNT], intensity
+                        self.leds_list[(step - i) % FACE_LEDS_COUNT], intensity
                     )
-                self.step += 1
+                with self._lock:
+                    self.step = step + 1
         except RuntimeError:
             pass
 
@@ -45,10 +54,14 @@ class RobotEyes:
         Args:
             mode: Target animation mode or None to deactivate.
         """
-        self.task.stop()
-        self.mode = mode
-        if mode:
-            self.step = 0
-            self.task.start(True)
-        else:
-            self.leds.setIntensity("FaceLeds", 1.0)
+        with self._lock:
+            if self._running:
+                self.task.stop()
+                self._running = False
+            self.mode = mode
+            if mode:
+                self.step = 0
+                self.task.start(True)
+                self._running = True
+            else:
+                self.leds.setIntensity("FaceLeds", 1.0)

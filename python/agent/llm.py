@@ -62,10 +62,6 @@ class LLMManager:
         self.context.append({"role": "user", "content": text})
         self._trim_context()
 
-    def add_assistant_message(self, text: str) -> None:
-        """Add an assistant message to the context."""
-        self.context.append({"role": "assistant", "content": text})
-
     def generate_response(self) -> str:
         """Generate a response from the LLM.
 
@@ -79,6 +75,9 @@ class LLMManager:
                 stream=False,
                 max_tokens=8192,
             )
+            if not completion.choices:
+                logger.error("LLM returned no choices")
+                return ""
             text: str = completion.choices[0].message.content or ""
 
             self._logger.log(
@@ -86,8 +85,9 @@ class LLMManager:
                 text,
             )
 
-            self.context.append({"role": "assistant", "content": text})
-            self._trim_context()
+            if text:
+                self.context.append({"role": "assistant", "content": text})
+                self._trim_context()
             return text
         except Exception as e:
             logger.error("LLM error: %s", e)

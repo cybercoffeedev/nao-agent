@@ -56,9 +56,12 @@ class RobotAgent:
                         self.step_executor.execute(response)
                     time.sleep(1.0)
                 except RuntimeError as e:
-                    if "Socket" in str(e) or "not connected" in str(e).lower():
+                    error_msg = str(e).lower()
+                    if "socket" in error_msg or "not connected" in error_msg:
                         logger.warning("Socket lost, reconnecting to robot...")
                         self.robot.reconnect()
+                    elif "sftp" in error_msg:
+                        logger.warning("SFTP error: %s", e)
                     else:
                         raise
         except KeyboardInterrupt:

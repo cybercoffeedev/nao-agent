@@ -26,11 +26,12 @@ class LLMLogger:
             response_content: The LLM response content.
         """
         self._request_counter += 1
-        ts = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S_%f")
+        now = datetime.now(timezone.utc)
+        ts = now.strftime("%Y%m%d_%H%M%S_%f")
         filename = f"{ts}_{self._request_counter:04d}.json"
 
         entry = {
-            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "timestamp": now.isoformat(),
             "model": request_kwargs.get("model"),
             "request": {
                 "messages": request_kwargs.get("messages"),
