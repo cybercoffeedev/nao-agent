@@ -32,6 +32,10 @@ class Robot:
         self.actions = None
         self.audio = None
         self.tts = None
+        self._audio_recorder = None
+        self._speech_reco = None
+        self._memory = None
+        self._tts_service = None
 
     def connect_to_robot(self):
         """Establishes tcp session connection to robot and registers AL services."""
@@ -41,21 +45,38 @@ class Robot:
         except Exception as e:
             raise ConnectionError(f"Failed connecting to robot: {e}") from e
 
-        memory = self.session.service("ALMemory")
-        audio_recorder = self.session.service("ALAudioRecorder")
-        speech_reco = self.session.service("ALSpeechRecognition")
-        tts = self.session.service("ALTextToSpeech")
+        self._memory = self.session.service("ALMemory")
+        self._audio_recorder = self.session.service("ALAudioRecorder")
+        self._speech_reco = self.session.service("ALSpeechRecognition")
+        self._tts_service = self.session.service("ALTextToSpeech")
 
         self.eyes = RobotEyes(self.session)
         self.actions = RobotActions(self.session)
-        self.audio = RobotAudio(audio_recorder, speech_reco, memory, self.remote_wav_path,
-                                ssh_host=self.ip, ssh_username=self.username, ssh_password=self.password)
-        self.tts = RobotTTS(tts)
+        self.audio = RobotAudio(self._audio_recorder, self._speech_reco, self._memory,
+                                self.remote_wav_path, ssh_host=self.ip,
+                                ssh_username=self.username, ssh_password=self.password)
+        self.tts = RobotTTS(self._tts_service)
 
-        speech_reco.setLanguage("Polish")
-        speech_reco.pause(True)
-        speech_reco.setVocabulary(["NAO"], False)
-        speech_reco.pause(False)
+        self._speech_reco.setLanguage("Polish")
+        try:
+            self._speech_reco.unsubscribe("SpeechDetector")
+        except Exception:
+            pass
+        self._speech_reco.pause(True)
+        self._speech_reco.setVocabulary(["NAO"], False)
+        self._speech_reco.pause(False)
+
+    def _reconnect(self):
+        """Reconnects to robot after socket failure."""
+        logger.warning("Attempting to reconnect to robot...")
+        try:
+            if self.session:
+                self.session.close()
+        except Exception:
+            pass
+        self.session = None
+        self.connect_to_robot()
+        logger.info("Reconnected to robot successfully.")
 
     def set_eyes(self, mode):
         """Shorthand for controlling the robot's eye animation mode."""
@@ -66,8 +87,15 @@ class Robot:
         self.tts.speak(text)
 
     def execute_action(self, name: str, *args, **kwargs):
-        """Executes a named action from the ACTIONS registry."""
-        return self.actions.execute(name, *args, **kwargs)
+        """Executes a named action from the ACTIONS registry. Reconnects on socket failure."""
+        try:
+            return self.actions.execute(name, *args, **kwargs)
+        except RuntimeError as e:
+            if "Socket" in str(e) or "not connected" in str(e).lower():
+                logger.warning("Socket lost during action '%s', reconnecting...", name)
+                self._reconnect()
+                return self.actions.execute(name, *args, **kwargs)
+            raise
 
     def disconnect(self):
         """Resets robot state and closes the session."""

@@ -19,12 +19,15 @@ class RobotEyes:
 
     def _tick(self):
         """Callback step executed periodically by qi.PeriodicTask to update LEDs."""
-        if self.mode == "listening":
-            self.leds.fadeRGB("FaceLeds", 0x0000FFFF, 0.0)
-        elif self.mode == "thinking":
-            for i, intensity in enumerate((1.0, 0.6, 0.2, 0.0)):
-                self.leds.setIntensity(self.leds_list[(self.step - i) % 8], intensity)
-            self.step += 1
+        try:
+            if self.mode == "listening":
+                self.leds.fadeRGB("FaceLeds", 0x0000FFFF, 0.0)
+            elif self.mode == "thinking":
+                for i, intensity in enumerate((1.0, 0.6, 0.2, 0.0)):
+                    self.leds.setIntensity(self.leds_list[(self.step - i) % 8], intensity)
+                self.step += 1
+        except RuntimeError:
+            pass
 
     def set(self, mode: str | None):
         """Changes the current eye animation mode.

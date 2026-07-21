@@ -45,12 +45,22 @@ class RobotAgent:
         try:
             return json.loads(raw)
         except json.JSONDecodeError:
-            match = re.search(r'\[.*\]', raw, re.DOTALL)
-            if match:
-                try:
-                    return json.loads(match.group())
-                except json.JSONDecodeError:
-                    pass
+            pass
+
+        for match in re.finditer(r'\[.*?\]', raw, re.DOTALL):
+            try:
+                result = json.loads(match.group())
+                if isinstance(result, list):
+                    return result
+            except json.JSONDecodeError:
+                continue
+
+        match = re.search(r'\[.*\]', raw, re.DOTALL)
+        if match:
+            try:
+                return json.loads(match.group())
+            except json.JSONDecodeError:
+                pass
         return None
 
     def _execute_action(self, action_name, action_args):
@@ -81,9 +91,10 @@ class RobotAgent:
         steps = self._parse_steps(raw)
 
         if not steps or not isinstance(steps, list):
-            if raw.strip():
+            cleaned = self._clean_raw_text(raw)
+            if cleaned:
                 self.robot.set_eyes(None)
-                self.robot.speak(raw)
+                self.robot.speak(cleaned)
             return
 
         pending_response_needed = False
@@ -108,26 +119,61 @@ class RobotAgent:
             response = self.llm.generate_response()
             logger.info("LLM: %s", response[:200] if response else "")
             if response:
-                self.robot.set_eyes(None)
-                self.robot.speak(response)
+                self._speak_response(response)
+
+    def _speak_response(self, raw: str):
+        """Extracts and speaks text from LLM response without executing actions."""
+        steps = self._parse_steps(raw)
+        if steps and isinstance(steps, list):
+            for step in steps:
+                if "speak" in step:
+                    self.robot.set_eyes(None)
+                    self.robot.speak(step["speak"])
+                    return
+        cleaned = self._clean_raw_text(raw)
+        if cleaned:
+            self.robot.set_eyes(None)
+            self.robot.speak(cleaned)
+
+    @staticmethod
+    def _clean_raw_text(raw: str) -> str:
+        """Strips JSON fragments and action keywords from raw LLM output for TTS."""
+        texts = re.findall(r'"speak"\s*:\s*"([^"]*)"', raw)
+        if texts:
+            return " ".join(texts)
+
+        cleaned = re.sub(r'\[.*?\]', '', raw, flags=re.DOTALL)
+        cleaned = re.sub(r'\{.*?\}', '', cleaned, flags=re.DOTALL)
+        cleaned = re.sub(r'"(speak|action|args|query)"\s*:\s*', '', cleaned)
+        cleaned = re.sub(r'\b(speak|action|args)\b', '', cleaned, flags=re.IGNORECASE)
+        cleaned = re.sub(r'[{}\[\]":]', '', cleaned)
+        cleaned = re.sub(r'\s+', ' ', cleaned).strip()
+        return cleaned
 
     def run(self):
         self.robot.connect_to_robot()
 
         try:
             while True:
-                self.listen_for_speech()
-                self.robot.audio.download_audio(self.robot.local_wav_path)
-                self.robot.set_eyes("thinking")
+                try:
+                    self.listen_for_speech()
+                    self.robot.audio.download_audio(self.robot.local_wav_path)
+                    self.robot.set_eyes("thinking")
 
-                text = self.asr.transcribe_audio()
-                if text:
-                    logger.info("User: %s", text)
-                    self.llm.add_user_message(text)
-                    response = self.llm.generate_response()
-                    logger.info("LLM: %s", response[:200] if response else "")
-                    self._execute_steps(response)
-                time.sleep(1.0)
+                    text = self.asr.transcribe_audio()
+                    if text:
+                        logger.info("User: %s", text)
+                        self.llm.add_user_message(text)
+                        response = self.llm.generate_response()
+                        logger.info("LLM: %s", response[:200] if response else "")
+                        self._execute_steps(response)
+                    time.sleep(1.0)
+                except RuntimeError as e:
+                    if "Socket" in str(e) or "not connected" in str(e).lower():
+                        logger.warning("Socket lost, reconnecting to robot...")
+                        self.robot._reconnect()
+                    else:
+                        raise
         except KeyboardInterrupt:
             logger.info("Shutting down...")
         finally:
