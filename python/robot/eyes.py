@@ -55,10 +55,14 @@ class RobotEyes:
             mode: Target animation mode or None to deactivate.
         """
         with self._lock:
-            if self._running:
-                self.task.stop()
-                self._running = False
+            running = self._running
             self.mode = mode
+
+        if running:
+            self.task.stop()
+
+        with self._lock:
+            self._running = False
             if mode:
                 self.step = 0
                 self.task.start(True)
