@@ -162,4 +162,6 @@ class RobotActions:
         params = list(inspect.signature(method).parameters.keys())
         if len(args) < len(params):
             return f"Action '{name}' requires {len(params)} argument(s): {', '.join(params)}"
+        if len(args) > len(params):
+            return f"Action '{name}' takes {len(params)} argument(s), got {len(args)}"
         return method(*args)

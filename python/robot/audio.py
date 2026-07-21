@@ -52,7 +52,10 @@ class RobotAudio:
             self.audio_recorder.stopMicrophonesRecording()
         except Exception:
             logger.debug("No active recording to stop")
-        self.speech_reco.subscribe("SpeechDetector")
+        try:
+            self.speech_reco.subscribe("SpeechDetector")
+        except Exception as e:
+            logger.warning("Failed to subscribe to speech detection: %s", e)
         self.audio_recorder.startMicrophonesRecording(
             self.remote_wav_path, "wav", 48000, [1, 0, 0, 0]
         )

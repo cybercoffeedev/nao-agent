@@ -34,6 +34,7 @@ class RivaASR:
                 ["function-id", function_id],
             ],
         )
+        self._service = riva.client.ASRService(self.auth)
 
     def _cleanup(self) -> None:
         """Safely remove the local WAV file if it exists."""
@@ -65,8 +66,12 @@ class RivaASR:
         )
 
         try:
-            response = riva.client.ASRService(self.auth).offline_recognize(audio_data, config)
-            return "".join(r.alternatives[0].transcript for r in response.results)
+            response = self._service.offline_recognize(audio_data, config)
+            return "".join(
+                r.alternatives[0].transcript
+                for r in response.results
+                if r.alternatives
+            )
         except Exception as e:
             logger.error("Riva ASR error: %s", e)
             return ""

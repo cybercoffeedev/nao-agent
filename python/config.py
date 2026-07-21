@@ -22,10 +22,16 @@ class Config:
 
     def __post_init__(self) -> None:
         """Validate required fields after initialization."""
-        if not self.robot_ip:
-            raise ValueError("robot_ip cannot be empty")
-        if not self.nvidia_api_key:
-            raise ValueError("nvidia_api_key cannot be empty")
+        required_fields = {
+            "robot_ip": self.robot_ip,
+            "nvidia_api_key": self.nvidia_api_key,
+            "asr_function_id": self.asr_function_id,
+            "openai_base_url": self.openai_base_url,
+            "model": self.model,
+        }
+        missing = [name for name, value in required_fields.items() if not value]
+        if missing:
+            raise ValueError(f"Required config fields are empty: {', '.join(missing)}")
 
     @classmethod
     def from_env(cls) -> "Config":

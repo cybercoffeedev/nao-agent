@@ -5,7 +5,7 @@ from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeou
 
 from .llm import LLMManager
 from .response_parser import ResponseParser
-from ..robot import Robot
+from robot import Robot
 
 logger = logging.getLogger(__name__)
 
@@ -31,6 +31,7 @@ class StepExecutor:
         self.robot = robot
         self.llm = llm
         self.parser = ResponseParser()
+        self._executor = ThreadPoolExecutor(max_workers=1)
 
     def _execute_action(self, action_name: str, action_args: dict) -> str:
         """Execute a single action with timeout.
@@ -44,17 +45,16 @@ class StepExecutor:
         """
         logger.info("Executing: %s %s", action_name, action_args or "")
         try:
-            with ThreadPoolExecutor(max_workers=1) as executor:
-                future = executor.submit(
-                    self.robot.execute_action, action_name, **action_args
-                )
-                try:
-                    return future.result(timeout=TOOL_TIMEOUT)
-                except FuturesTimeoutError:
-                    future.cancel()
-                    result = f"Timeout after {TOOL_TIMEOUT}s"
-                    logger.warning(result)
-                    return result
+            future = self._executor.submit(
+                self.robot.execute_action, action_name, **action_args
+            )
+            try:
+                return future.result(timeout=TOOL_TIMEOUT)
+            except FuturesTimeoutError:
+                future.cancel()
+                result = f"Timeout after {TOOL_TIMEOUT}s"
+                logger.warning(result)
+                return result
         except Exception as e:
             result = f"Error: {e}"
             logger.error(result)
