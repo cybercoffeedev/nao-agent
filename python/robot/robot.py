@@ -59,7 +59,7 @@ class Robot:
         self._memory: Any = None
         self._tts_service: Any = None
 
-    def connect_to_robot(self) -> None:
+    def connect(self) -> None:
         """Establish tcp session connection to robot and register AL services."""
         self.session = qi.Session()
         try:
@@ -104,7 +104,7 @@ class Robot:
         except Exception:
             pass
         self.session = None
-        self.connect_to_robot()
+        self.connect()
         logger.info("Reconnected to robot successfully.")
 
     def set_eyes(self, mode: str | None) -> None:
@@ -142,6 +142,13 @@ class Robot:
                 self.reconnect()
                 return self.actions.execute(name, *args, **kwargs)
             raise
+
+    def download_audio(self) -> None:
+        """Download recorded audio from robot via SFTP."""
+        if self.audio is None:
+            logger.warning("Cannot download audio - robot not connected")
+            return
+        self.audio.download_audio(self.local_wav_path)
 
     @staticmethod
     def _is_socket_error(error: Exception) -> bool:

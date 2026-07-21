@@ -1,15 +1,13 @@
 """LLM conversation manager using OpenAI-compatible API."""
 
-import json
 import logging
-from datetime import datetime, timezone
 from pathlib import Path
 
 from openai import OpenAI
 
-logger = logging.getLogger(__name__)
+from llm_logger import LLMLogger
 
-LOG_DIR = Path(__file__).parent.parent / "logs"
+logger = logging.getLogger(__name__)
 
 
 class LLMManager:
@@ -43,31 +41,7 @@ class LLMManager:
         self.client = OpenAI(base_url=url, api_key=api_key, timeout=30.0)
         self.max_turns = max_turns
         self.context: list[dict[str, str]] = [{"role": "system", "content": system_msg}]
-        self._request_counter: int = 0
-        LOG_DIR.mkdir(parents=True, exist_ok=True)
-
-    def _log_request(self, request_kwargs: dict, response_content: str | None) -> None:
-        """Log LLM request/response to a JSON file."""
-        self._request_counter += 1
-        ts = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S_%f")
-        filename = f"{ts}_{self._request_counter:04d}.json"
-
-        entry = {
-            "timestamp": datetime.now(timezone.utc).isoformat(),
-            "model": request_kwargs.get("model"),
-            "request": {
-                "messages": request_kwargs.get("messages"),
-            },
-            "response": {
-                "content": response_content,
-            },
-        }
-
-        try:
-            path = LOG_DIR / filename
-            path.write_text(json.dumps(entry, ensure_ascii=False, indent=2), encoding="utf-8")
-        except Exception as e:
-            logger.warning("Could not write LLM log: %s", e)
+        self._logger = LLMLogger()
 
     def _trim_context(self) -> None:
         """Trim context to keep only the most recent turns."""
@@ -108,7 +82,7 @@ class LLMManager:
             )
             text: str = completion.choices[0].message.content or ""
 
-            self._log_request(
+            self._logger.log(
                 {"model": self.model, "messages": self.context},
                 text,
             )
