@@ -92,9 +92,9 @@ class StepExecutor:
         steps = self.parser.parse_steps(raw)
 
         if not steps or not isinstance(steps, list):
+            self.robot.set_eyes(None)
             cleaned = self.parser.clean_for_tts(raw)
             if cleaned:
-                self.robot.set_eyes(None)
                 self.robot.speak(cleaned)
             return
 
@@ -108,6 +108,7 @@ class StepExecutor:
                 action_name: str = step["action"]
                 action_args: dict = step.get("args", {})
                 result = self._execute_action(action_name, action_args)
+                self.robot.set_eyes(None)
 
                 if action_name in ACTIONS_NEEDING_RESPONSE:
                     self.llm.add_user_message(f"[Wynik wyszukiwania: {result}]")
@@ -122,3 +123,4 @@ class StepExecutor:
             if response:
                 response_steps = self.parser.parse_steps(response)
                 self._speak_response(response_steps, response)
+            self.robot.set_eyes(None)
