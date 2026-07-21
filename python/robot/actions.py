@@ -36,36 +36,6 @@ class RobotActions:
             if callable(method) and hasattr(method, "_action_description")
         }
 
-    def get_tool_schemas(self) -> list[dict]:
-        """Generate OpenAI function schemas for all registered actions."""
-        tools: list[dict] = []
-        for name, description in self._actions.items():
-            method = getattr(self, name)
-            sig = inspect.signature(method)
-            params = list(sig.parameters.keys())
-
-            properties: dict[str, dict] = {}
-            required: list[str] = []
-            for param_name in params:
-                properties[param_name] = {"type": "string"}
-                required.append(param_name)
-
-            tools.append({
-                "type": "function",
-                "function": {
-                    "name": name,
-                    "description": description,
-                    "strict": True,
-                    "parameters": {
-                        "type": "object",
-                        "properties": properties,
-                        "required": required,
-                        "additionalProperties": False,
-                    },
-                },
-            })
-        return tools
-
     @action("Wave your right hand in greeting.")
     def wave_right_hand(self) -> str:
         """Wave the robot's right hand."""

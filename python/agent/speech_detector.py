@@ -33,9 +33,9 @@ class SpeechDetector:
         speech_started = False
         silence_start: float | None = None
 
-        self.robot.audio.start_recording()
+        self.robot.start_recording()
         while True:
-            speaking: bool = self.robot.audio.is_speech_detected()
+            speaking: bool = self.robot.is_speech_detected()
             if speaking:
                 if not speech_started:
                     self.robot.set_eyes("listening")
@@ -48,4 +48,4 @@ class SpeechDetector:
                     self.robot.set_eyes(None)
                     break
             time.sleep(SPEECH_CHECK_INTERVAL)
-        self.robot.audio.stop_recording()
+        self.robot.stop_recording()

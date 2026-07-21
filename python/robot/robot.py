@@ -52,7 +52,7 @@ class Robot:
         self.session: qi.Session | None = None
         self.eyes: RobotEyes | None = None
         self.actions: RobotActions | None = None
-        self.audio: RobotAudio | None = None
+        self._audio: RobotAudio | None = None
         self.tts: RobotTTS | None = None
         self._audio_recorder: Any = None
         self._speech_reco: Any = None
@@ -74,7 +74,7 @@ class Robot:
 
         self.eyes = RobotEyes(self.session)
         self.actions = RobotActions(self.session)
-        self.audio = RobotAudio(
+        self._audio = RobotAudio(
             self._audio_recorder,
             self._speech_reco,
             self._memory,
@@ -145,10 +145,30 @@ class Robot:
 
     def download_audio(self) -> None:
         """Download recorded audio from robot via SFTP."""
-        if self.audio is None:
+        if self._audio is None:
             logger.warning("Cannot download audio - robot not connected")
             return
-        self.audio.download_audio(self.local_wav_path)
+        self._audio.download_audio(self.local_wav_path)
+
+    def start_recording(self) -> None:
+        """Start recording audio from robot's microphone."""
+        if self._audio is None:
+            logger.warning("Cannot start recording - robot not connected")
+            return
+        self._audio.start_recording()
+
+    def stop_recording(self) -> None:
+        """Stop recording audio."""
+        if self._audio is None:
+            logger.warning("Cannot stop recording - robot not connected")
+            return
+        self._audio.stop_recording()
+
+    def is_speech_detected(self) -> bool:
+        """Check if speech is currently detected."""
+        if self._audio is None:
+            return False
+        return self._audio.is_speech_detected()
 
     @staticmethod
     def _is_socket_error(error: Exception) -> bool:
