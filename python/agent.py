@@ -1,4 +1,6 @@
-import time, json
+import time
+import json
+import re
 import logging
 from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeoutError
 from robot import Robot
@@ -8,28 +10,21 @@ from llm import LLMManager
 logger = logging.getLogger(__name__)
 
 TOOL_TIMEOUT = 30
+ACTIONS_NEEDING_RESPONSE = {"web_search"}
+
 
 class RobotAgent:
-    """Central orchestrator for the voice-based chatbot loop."""
     def __init__(self, robot: Robot, asr: RivaASR, llm: LLMManager):
         self.robot = robot
         self.asr = asr
         self.llm = llm
 
-    def listen_for_speech(self, timeout=30):
-        """Monitors speech detection, activates eye animations,
-        and records audio until silence threshold is reached.
-        """
+    def listen_for_speech(self):
         speech_started = False
         silence_start = None
-        start = time.time()
 
         self.robot.audio.start_recording()
         while True:
-            if time.time() - start >= timeout:
-                logger.warning("Speech detection timed out")
-                self.robot.set_eyes(None)
-                break
             speaking = self.robot.audio.is_speech_detected()
             if speaking:
                 if not speech_started:
@@ -45,70 +40,93 @@ class RobotAgent:
             time.sleep(0.1)
         self.robot.audio.stop_recording()
 
-    def _process_response(self, tools):
-        """Process LLM response, executing tool calls and speaking results.
-
-        Keeps looping as long as the model returns tool calls, executing
-        each tool and feeding results back. Stops when the model returns
-        a text response or max iterations is reached.
-        """
+    def _parse_steps(self, raw: str):
+        """Parses JSON array from LLM response, handling malformed output."""
         try:
-            response = self.llm.generate_response(tools)
+            return json.loads(raw)
+        except json.JSONDecodeError:
+            match = re.search(r'\[.*\]', raw, re.DOTALL)
+            if match:
+                try:
+                    return json.loads(match.group())
+                except json.JSONDecodeError:
+                    pass
+        return None
+
+    def _execute_action(self, action_name, action_args):
+        """Execute a single action. Returns result string."""
+        logger.info("Executing: %s %s", action_name, action_args or "")
+        try:
+            with ThreadPoolExecutor(max_workers=1) as executor:
+                future = executor.submit(
+                    self.robot.execute_action, action_name, **action_args
+                )
+                return future.result(timeout=TOOL_TIMEOUT)
+        except FuturesTimeoutError:
+            result = f"Timeout after {TOOL_TIMEOUT}s"
+            logger.warning(result)
+            return result
         except Exception as e:
-            logger.error("LLM request failed: %s", e)
-            self.robot.set_eyes(None)
+            result = f"Error: {e}"
+            logger.error(result)
+            return result
+
+    def _execute_steps(self, raw: str):
+        """Parses JSON steps from LLM and executes them.
+
+        Steps: {"speak": "text"} or {"action": "name", "args": {...}}
+        For ACTIONS_NEEDING_RESPONSE: executes, adds result to context,
+        then generates response from LLM.
+        """
+        steps = self._parse_steps(raw)
+
+        if not steps or not isinstance(steps, list):
+            if raw.strip():
+                self.robot.set_eyes(None)
+                self.robot.speak(raw)
             return
 
-        for _ in range(5):
-            tool_calls = response.tool_calls
+        pending_response_needed = False
 
-            if not tool_calls:
+        for step in steps:
+            if "speak" in step:
                 self.robot.set_eyes(None)
-                if response.content:
-                    self.robot.speak(response.content)
-                return
+                self.robot.speak(step["speak"])
+            elif "action" in step:
+                action_name = step["action"]
+                action_args = step.get("args", {})
+                result = self._execute_action(action_name, action_args)
 
-            for tc in tool_calls:
-                args = json.loads(tc.function.arguments)
-                logger.info("Executing tool: %s(%s)", tc.function.name, args)
-                try:
-                    with ThreadPoolExecutor(max_workers=1) as executor:
-                        future = executor.submit(self.robot.execute_action, tc.function.name, **args)
-                        result = future.result(timeout=TOOL_TIMEOUT)
-                except FuturesTimeoutError:
-                    result = f"Tool '{tc.function.name}' timed out after {TOOL_TIMEOUT}s"
-                    logger.warning(result)
-                except Exception as e:
-                    result = f"Tool '{tc.function.name}' failed: {e}"
-                    logger.error(result)
-                self.llm.add_tool_result(tc.id, str(result))
+                if action_name in ACTIONS_NEEDING_RESPONSE:
+                    self.llm.add_user_message(f"[Wynik wyszukiwania: {result}]")
+                    pending_response_needed = True
+                else:
+                    self.llm.add_user_message(f"[Wynik: {result}]")
 
+        if pending_response_needed:
             self.robot.set_eyes("thinking")
-            try:
-                response = self.llm.generate_response(tools)
-            except Exception as e:
-                logger.error("LLM request failed: %s", e)
+            response = self.llm.generate_response()
+            logger.info("LLM: %s", response[:200] if response else "")
+            if response:
                 self.robot.set_eyes(None)
-                return
-        else:
-            logger.warning("Max tool call iterations reached")
-            self.robot.set_eyes(None)
+                self.robot.speak(response)
 
     def run(self):
-        """Starts the interactive chatbot main loop."""
         self.robot.connect_to_robot()
-        tools = self.robot.actions.get_tool_schemas()
 
         try:
             while True:
-                self.listen_for_speech(timeout=30)
+                self.listen_for_speech()
                 self.robot.audio.download_audio(self.robot.local_wav_path)
                 self.robot.set_eyes("thinking")
 
                 text = self.asr.transcribe_audio()
                 if text:
-                    self.llm.add_message("user", text)
-                    self._process_response(tools)
+                    logger.info("User: %s", text)
+                    self.llm.add_user_message(text)
+                    response = self.llm.generate_response()
+                    logger.info("LLM: %s", response[:200] if response else "")
+                    self._execute_steps(response)
                 time.sleep(1.0)
         except KeyboardInterrupt:
             logger.info("Shutting down...")

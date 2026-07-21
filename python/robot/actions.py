@@ -140,10 +140,7 @@ class RobotActions:
         try:
             results = DDGS(timeout=10).text(query, max_results=3)
             if results:
-                output = []
-                for r in results:
-                    output.append(f"{r['title']}: {r['body']}")
-                return "\n".join(output)
+                return "\n".join(r['body'] for r in results)
             return "No results found."
         except Exception as e:
             return f"Search error: {e}"
