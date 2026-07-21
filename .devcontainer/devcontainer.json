@@ -11,6 +11,13 @@
     "remoteUser": "dev",
     "workspaceMount": "source=${localWorkspaceFolder},target=/home/nao-agent,type=bind",
     "workspaceFolder": "/home/nao-agent",
+    "forwardPorts": [4096],
+    "portsAttributes": {
+        "4096": {
+            "label": "OpenCode Web",
+            "onAutoForward": "openBrowser"
+        }
+    },
     "customizations": {
         "vscode": {
             "extensions": [

@@ -62,11 +62,17 @@ ARG USER_GID=$USER_UID
 RUN groupadd --gid $USER_GID $USERNAME \
     && useradd --uid $USER_UID --gid $USER_GID -m $USERNAME -s /bin/bash \
     && apt-get update \
-    && apt-get install -y sudo \
+    && apt-get install -y sudo curl \
     && echo "$USERNAME ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/$USERNAME \
     && chmod 0440 /etc/sudoers.d/$USERNAME \
     && apt-get install -y git \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
+
+RUN curl -fsSL -o /tmp/opencode.tar.gz https://github.com/anomalyco/opencode/releases/latest/download/opencode-linux-x64.tar.gz \
+    && tar -xzf /tmp/opencode.tar.gz -C /tmp \
+    && mv /tmp/opencode /usr/local/bin/opencode \
+    && chmod +x /usr/local/bin/opencode \
+    && rm /tmp/opencode.tar.gz
 
 ENV PYTHONUNBUFFERED=1
 
