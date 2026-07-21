@@ -1,5 +1,6 @@
 """Response parser - extracts and cleans text from LLM output."""
 
+import json
 import re
 from typing import Any
 
@@ -17,8 +18,6 @@ class ResponseParser:
         Returns:
             Parsed list of steps, or None if parsing fails.
         """
-        import json
-
         try:
             result = json.loads(raw)
             if isinstance(result, list):
@@ -76,8 +75,6 @@ class ResponseParser:
         Returns:
             Extracted speak text, or None if not found.
         """
-        import json
-
         steps = ResponseParser.parse_steps(raw)
         if steps and isinstance(steps, list):
             for step in steps:

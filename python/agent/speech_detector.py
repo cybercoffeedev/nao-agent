@@ -3,7 +3,7 @@
 import logging
 import time
 
-from robot import Robot
+from ..robot import Robot
 
 logger = logging.getLogger(__name__)
 

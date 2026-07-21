@@ -1,11 +1,10 @@
 """LLM conversation manager using OpenAI-compatible API."""
 
 import logging
-from pathlib import Path
 
 from openai import OpenAI
 
-from llm_logger import LLMLogger
+from .llm_logger import LLMLogger
 
 logger = logging.getLogger(__name__)
 

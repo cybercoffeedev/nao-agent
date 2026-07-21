@@ -5,10 +5,8 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
-from agent import RobotAgent
-from asr import RivaASR
+from agent import RobotAgent, LLMManager, RivaASR
 from config import Config
-from llm import LLMManager
 from robot import Robot
 
 logger = logging.getLogger(__name__)

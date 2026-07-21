@@ -3,11 +3,11 @@
 import logging
 import time
 
-from asr import RivaASR
-from llm import LLMManager
-from robot import Robot
-from speech_detector import SpeechDetector
-from step_executor import StepExecutor
+from ..asr import RivaASR
+from ..llm import LLMManager
+from ..robot import Robot
+from .speech_detector import SpeechDetector
+from .step_executor import StepExecutor
 
 logger = logging.getLogger(__name__)
 

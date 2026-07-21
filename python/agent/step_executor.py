@@ -4,9 +4,9 @@ import logging
 from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeoutError
 from typing import Any
 
-from llm import LLMManager
-from response_parser import ResponseParser
-from robot import Robot
+from .llm import LLMManager
+from .response_parser import ResponseParser
+from ..robot import Robot
 
 logger = logging.getLogger(__name__)
 
