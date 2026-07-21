@@ -1,44 +1,66 @@
+"""Main robot class that manages connection and delegates to submodules."""
+
 import logging
+from typing import Any
+
 import qi
-from .eyes import RobotEyes
+
 from .actions import RobotActions
 from .audio import RobotAudio
+from .eyes import RobotEyes
 from .tts import RobotTTS
 
 logger = logging.getLogger(__name__)
 
+RECONNECT_ERROR_KEYWORDS: frozenset[str] = frozenset({"Socket", "not connected"})
+
+
 class Robot:
     """Main robot class that manages connection and delegates to submodules."""
 
-    def __init__(self, ip, port, username, password, remote_wav_path, local_wav_path):
-        """Initializes NAO robot configuration parameters.
+    def __init__(
+        self,
+        ip: str,
+        port: int,
+        username: str,
+        password: str,
+        remote_wav_path: str,
+        local_wav_path: str,
+        ssh_port: int = 22,
+    ) -> None:
+        """Initialize NAO robot configuration parameters.
 
         Args:
-            ip (str): IP address of the robot.
-            port (int): Port of the NAOqi service.
-            username (str): SSH/SFTP username.
-            password (str): SSH/SFTP password.
-            remote_wav_path (str): File path where wav audio is recorded on the robot.
-            local_wav_path (str): File path where wav audio is downloaded locally.
+            ip: IP address of the robot.
+            port: Port of the NAOqi service.
+            username: SSH/SFTP username.
+            password: SSH/SFTP password.
+            remote_wav_path: File path where wav audio is recorded on the robot.
+            local_wav_path: File path where wav audio is downloaded locally.
+            ssh_port: SSH port for file transfer.
         """
+        if not ip:
+            raise ValueError("ip cannot be empty")
+
         self.ip = ip
         self.port = port
         self.username = username
         self.password = password
         self.remote_wav_path = remote_wav_path
         self.local_wav_path = local_wav_path
-        self.session = None
-        self.eyes = None
-        self.actions = None
-        self.audio = None
-        self.tts = None
-        self._audio_recorder = None
-        self._speech_reco = None
-        self._memory = None
-        self._tts_service = None
+        self.ssh_port = ssh_port
+        self.session: qi.Session | None = None
+        self.eyes: RobotEyes | None = None
+        self.actions: RobotActions | None = None
+        self.audio: RobotAudio | None = None
+        self.tts: RobotTTS | None = None
+        self._audio_recorder: Any = None
+        self._speech_reco: Any = None
+        self._memory: Any = None
+        self._tts_service: Any = None
 
-    def connect_to_robot(self):
-        """Establishes tcp session connection to robot and registers AL services."""
+    def connect_to_robot(self) -> None:
+        """Establish tcp session connection to robot and register AL services."""
         self.session = qi.Session()
         try:
             self.session.connect(f"tcp://{self.ip}:{self.port}")
@@ -52,9 +74,16 @@ class Robot:
 
         self.eyes = RobotEyes(self.session)
         self.actions = RobotActions(self.session)
-        self.audio = RobotAudio(self._audio_recorder, self._speech_reco, self._memory,
-                                self.remote_wav_path, ssh_host=self.ip,
-                                ssh_username=self.username, ssh_password=self.password)
+        self.audio = RobotAudio(
+            self._audio_recorder,
+            self._speech_reco,
+            self._memory,
+            self.remote_wav_path,
+            ssh_host=self.ip,
+            ssh_username=self.username,
+            ssh_password=self.password,
+            ssh_port=self.ssh_port,
+        )
         self.tts = RobotTTS(self._tts_service)
 
         self._speech_reco.setLanguage("Polish")
@@ -66,8 +95,8 @@ class Robot:
         self._speech_reco.setVocabulary(["NAO"], False)
         self._speech_reco.pause(False)
 
-    def _reconnect(self):
-        """Reconnects to robot after socket failure."""
+    def reconnect(self) -> None:
+        """Reconnect to robot after socket failure."""
         logger.warning("Attempting to reconnect to robot...")
         try:
             if self.session:
@@ -78,27 +107,50 @@ class Robot:
         self.connect_to_robot()
         logger.info("Reconnected to robot successfully.")
 
-    def set_eyes(self, mode):
+    def set_eyes(self, mode: str | None) -> None:
         """Shorthand for controlling the robot's eye animation mode."""
+        if self.eyes is None:
+            logger.warning("Cannot set eyes - robot not connected")
+            return
         self.eyes.set(mode)
 
-    def speak(self, text):
-        """Says provided message with built-in TTS."""
+    def speak(self, text: str) -> None:
+        """Say provided message with built-in TTS."""
+        if self.tts is None:
+            logger.warning("Cannot speak - robot not connected")
+            return
         self.tts.speak(text)
 
-    def execute_action(self, name: str, *args, **kwargs):
-        """Executes a named action from the ACTIONS registry. Reconnects on socket failure."""
+    def execute_action(self, name: str, *args: Any, **kwargs: Any) -> str:
+        """Execute a named action from the ACTIONS registry.
+
+        Args:
+            name: Name of the action to execute.
+            *args: Positional arguments for the action.
+            **kwargs: Keyword arguments for the action.
+
+        Returns:
+            Action result string.
+        """
+        if self.actions is None:
+            return "Robot not connected"
         try:
             return self.actions.execute(name, *args, **kwargs)
         except RuntimeError as e:
-            if "Socket" in str(e) or "not connected" in str(e).lower():
+            if self._is_socket_error(e):
                 logger.warning("Socket lost during action '%s', reconnecting...", name)
-                self._reconnect()
+                self.reconnect()
                 return self.actions.execute(name, *args, **kwargs)
             raise
 
-    def disconnect(self):
-        """Resets robot state and closes the session."""
+    @staticmethod
+    def _is_socket_error(error: Exception) -> bool:
+        """Check if an error is a socket/connection error."""
+        error_str = str(error).lower()
+        return any(keyword.lower() in error_str for keyword in RECONNECT_ERROR_KEYWORDS)
+
+    def disconnect(self) -> None:
+        """Reset robot state and close the session."""
         try:
             if self.eyes:
                 self.eyes.set(None)
