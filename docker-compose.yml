@@ -1,0 +1,28 @@
+services:
+  dev:
+    build:
+      context: .
+      target: dev
+    volumes:
+      - ./python:/home/nao-agent/python
+      - ./data:/home/nao-agent/data
+      - ./.env:/home/nao-agent/.env:ro
+    env_file: .env
+    stdin_open: true
+    tty: true
+
+  production:
+    build:
+      context: .
+      target: production
+    env_file: .env
+    environment:
+      - LOG_DIR=/tmp/logs
+      - HOME=/tmp
+      - LOCAL_WAV_PATH=/tmp/capture.wav
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    tmpfs:
+      - /tmp
+      - /app/logs
