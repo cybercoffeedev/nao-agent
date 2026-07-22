@@ -6,16 +6,18 @@ from pathlib import Path
 from dotenv import load_dotenv
 
 from agent import RobotAgent, LLMManager, RivaASR
+from agent.llm import build_system_prompt
 from config import Config
 from robot import Robot
+from robot.actions import get_action_descriptions
 
 logger = logging.getLogger(__name__)
 
 SYSTEM_PROMPT_PATH = Path(__file__).parent.parent / "data" / "system_msg.txt"
 
 
-def load_system_prompt() -> str:
-    """Read the system prompt/instruction from data/system_msg.txt."""
+def load_user_prompt() -> str:
+    """Read user-defined system prompt from data/system_msg.txt."""
     try:
         return SYSTEM_PROMPT_PATH.read_text(encoding="utf-8")
     except FileNotFoundError:
@@ -48,7 +50,10 @@ def main() -> None:
         api_key=config.nvidia_api_key,
         url=config.openai_base_url,
         model=config.model,
-        system_msg=load_system_prompt(),
+        system_msg=build_system_prompt(
+            actions=get_action_descriptions(),
+            user_prompt=load_user_prompt(),
+        ),
     )
 
     RobotAgent(robot, asr, llm).run()

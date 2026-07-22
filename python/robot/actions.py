@@ -165,3 +165,12 @@ class RobotActions:
         if len(args) > len(params):
             return f"Action '{name}' takes {len(params)} argument(s), got {len(args)}"
         return method(*args)
+
+
+def get_action_descriptions() -> dict[str, str]:
+    """Return action names and descriptions from @action decorators."""
+    return {
+        name: method._action_description  # type: ignore[attr-defined]
+        for name, method in RobotActions.__dict__.items()
+        if callable(method) and hasattr(method, "_action_description")
+    }

@@ -8,6 +8,41 @@ from .llm_logger import LLMLogger
 
 logger = logging.getLogger(__name__)
 
+CORE_SYSTEM_PROMPT = """\
+You are a voice assistant for a NAO robot. Always respond in the same language as the user.
+
+Always respond as a JSON array of steps. Format:
+[{"speak": "text"}, {"action": "name", "args": {"param": "value"}}]
+
+Rules:
+- Never use Markdown
+- Always return a JSON array
+- Actions without arguments do not require the "args" field
+- Use "speak" to say something to the user
+- Combine "action" and "speak" in the same step when the robot should do something and say something
+"""
+
+
+def build_system_prompt(actions: dict[str, str], user_prompt: str = "") -> str:
+    """Build full system prompt from core instructions, actions and user customization.
+
+    Args:
+        actions: Mapping of action name to description.
+        user_prompt: Optional user-defined prompt appended at the end.
+    """
+    sections = [CORE_SYSTEM_PROMPT]
+
+    if actions:
+        lines = ["Available actions:"]
+        for name, desc in actions.items():
+            lines.append(f"- {name} - {desc}")
+        sections.append("\n".join(lines) + "\n")
+
+    if user_prompt.strip():
+        sections.append(user_prompt.strip())
+
+    return "\n".join(sections)
+
 
 class LLMManager:
     """Manages LLM conversations via an OpenAI-compatible API."""
@@ -26,7 +61,7 @@ class LLMManager:
             api_key: API key for authentication.
             url: Base URL for the OpenAI-compatible API.
             model: Model name to use for completions.
-            system_msg: System prompt/instruction for the LLM.
+            system_msg: Full system prompt for the LLM.
             max_turns: Maximum number of conversation turns to keep in context.
         """
         if not api_key:
