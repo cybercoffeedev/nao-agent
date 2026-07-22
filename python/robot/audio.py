@@ -1,11 +1,68 @@
 """Manages robot audio recording, speech recognition and file transfer."""
 
+import json
 import logging
+import threading
+from pathlib import Path
 from typing import Any
 
 import paramiko
 
 logger = logging.getLogger(__name__)
+
+KNOWN_HOSTS_PATH = Path(__file__).parent.parent.parent / "data" / "known_hosts.json"
+
+
+class _SavedHostKeyPolicy(paramiko.MissingHostKeyPolicy):
+    """Accepts unknown hosts on first connection, verifies on subsequent ones.
+
+    Stores accepted host keys in a JSON file so that future connections
+    can verify the host identity and detect potential MITM attacks.
+    """
+
+    def __init__(self, hosts_path: Path = KNOWN_HOSTS_PATH) -> None:
+        self._hosts_path = hosts_path
+        self._keys: dict[str, str] = {}
+        self._load()
+
+    def _load(self) -> None:
+        """Load known hosts from disk."""
+        try:
+            if self._hosts_path.exists():
+                self._keys = json.loads(self._hosts_path.read_text(encoding="utf-8"))
+        except (json.JSONDecodeError, OSError) as e:
+            logger.warning("Could not load known hosts: %s", e)
+
+    def _save(self) -> None:
+        """Persist known hosts to disk."""
+        try:
+            self._hosts_path.parent.mkdir(parents=True, exist_ok=True)
+            self._hosts_path.write_text(
+                json.dumps(self._keys, indent=2), encoding="utf-8"
+            )
+        except OSError as e:
+            logger.warning("Could not save known hosts: %s", e)
+
+    def missing_host_key(
+        self, client: paramiko.SSHClient, hostname: str, key: paramiko.PKey
+    ) -> None:
+        """Handle a host key that is not yet in known_hosts."""
+        fp = key.get_fingerprint().hex()
+
+        if hostname in self._keys:
+            if self._keys[hostname] == fp:
+                return
+            raise paramiko.SSHException(
+                f"Host key for {hostname} has changed! "
+                f"Expected {self._keys[hostname]}, got {fp}. "
+                f"Possible MITM attack."
+            )
+
+        logger.warning(
+            "Accepting new host key for %s (fingerprint: %s)", hostname, fp
+        )
+        self._keys[hostname] = fp
+        self._save()
 
 
 class RobotAudio:
@@ -46,6 +103,39 @@ class RobotAudio:
         self.ssh_password = ssh_password
         self.ssh_port = ssh_port
 
+        self._ssh: paramiko.SSHClient | None = None
+        self._lock = threading.Lock()
+
+    def _get_ssh(self) -> paramiko.SSHClient:
+        """Return an active SSH connection, creating one if needed."""
+        if self._ssh is not None:
+            try:
+                self._ssh.exec_command("echo ok", timeout=5)
+                return self._ssh
+            except Exception:
+                logger.debug("SSH connection stale, reconnecting...")
+                self._close_ssh()
+
+        ssh = paramiko.SSHClient()
+        ssh.set_missing_host_key_policy(_SavedHostKeyPolicy())
+        ssh.connect(
+            self.ssh_host,
+            port=self.ssh_port,
+            username=self.ssh_username,
+            password=self.ssh_password,
+        )
+        self._ssh = ssh
+        return ssh
+
+    def _close_ssh(self) -> None:
+        """Close the current SSH connection if open."""
+        if self._ssh is not None:
+            try:
+                self._ssh.close()
+            except Exception:
+                pass
+            self._ssh = None
+
     def start_recording(self) -> None:
         """Start recording audio and subscribe to speech detection."""
         try:
@@ -75,16 +165,16 @@ class RobotAudio:
         Raises:
             RuntimeError: If SFTP download fails.
         """
-        try:
-            with paramiko.SSHClient() as ssh:
-                ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-                ssh.connect(
-                    self.ssh_host,
-                    port=self.ssh_port,
-                    username=self.ssh_username,
-                    password=self.ssh_password,
-                )
+        with self._lock:
+            try:
+                ssh = self._get_ssh()
                 with ssh.open_sftp() as sftp:
                     sftp.get(self.remote_wav_path, local_path)
-        except Exception as e:
-            raise RuntimeError(f"SFTP download failed: {e}") from e
+            except Exception as e:
+                self._close_ssh()
+                raise RuntimeError(f"SFTP download failed: {e}") from e
+
+    def close(self) -> None:
+        """Close the persistent SSH connection."""
+        with self._lock:
+            self._close_ssh()

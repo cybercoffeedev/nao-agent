@@ -1,7 +1,8 @@
 """Step executor - executes parsed action steps."""
 
 import logging
-from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeoutError
+import threading
+from concurrent.futures import Future, ThreadPoolExecutor, TimeoutError as FuturesTimeoutError
 
 from .llm import LLMManager
 from .response_parser import ResponseParser
@@ -31,7 +32,17 @@ class StepExecutor:
         self.robot = robot
         self.llm = llm
         self.parser = ResponseParser()
-        self._executor = ThreadPoolExecutor(max_workers=1)
+        self._executor = ThreadPoolExecutor(max_workers=2)
+        self._abandoned_futures: list[Future] = []
+        self._lock = threading.Lock()
+
+    def shutdown(self) -> None:
+        """Shut down the thread pool and cancel abandoned futures."""
+        with self._lock:
+            for future in self._abandoned_futures:
+                future.cancel()
+            self._abandoned_futures.clear()
+        self._executor.shutdown(wait=False)
 
     def _execute_action(self, action_name: str, action_args: dict) -> str:
         """Execute a single action with timeout.
@@ -51,7 +62,8 @@ class StepExecutor:
             try:
                 return future.result(timeout=TOOL_TIMEOUT)
             except FuturesTimeoutError:
-                future.cancel()
+                with self._lock:
+                    self._abandoned_futures.append(future)
                 result = f"Timeout after {TOOL_TIMEOUT}s"
                 logger.warning(result)
                 return result

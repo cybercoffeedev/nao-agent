@@ -27,6 +27,7 @@ class RobotEyes:
         self.task.setUsPeriod(LED_UPDATE_PERIOD_US)
         self._lock = threading.Lock()
         self.mode: str | None = None
+        self._active_mode: str | None = None
         self.step: int = 0
         self._running: bool = False
 
@@ -36,9 +37,18 @@ class RobotEyes:
             with self._lock:
                 mode = self.mode
                 step = self.step
+
             if mode == "listening":
-                self.leds.fadeRGB("FaceLeds", SPEAK_HEX_YELLOW, 0.0)
+                if self._active_mode != "listening":
+                    self.leds.fadeRGB("FaceLeds", SPEAK_HEX_YELLOW, 0.0)
+                    with self._lock:
+                        self._active_mode = "listening"
             elif mode == "thinking":
+                if self._active_mode != "thinking":
+                    with self._lock:
+                        self.step = 0
+                    self._active_mode = "thinking"
+                    step = 0
                 for i, intensity in enumerate(LED_INTENSITIES):
                     self.leds.setIntensity(
                         self.leds_list[(step - i) % FACE_LEDS_COUNT], intensity
@@ -57,6 +67,7 @@ class RobotEyes:
         with self._lock:
             running = self._running
             self.mode = mode
+            self._active_mode = None
             self._running = False
 
         if running:

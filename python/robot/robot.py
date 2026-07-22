@@ -184,6 +184,11 @@ class Robot:
         except Exception as e:
             logger.warning("Error resetting eyes: %s", e)
         try:
+            if self._audio:
+                self._audio.close()
+        except Exception as e:
+            logger.warning("Error closing SSH connection: %s", e)
+        try:
             if self.session:
                 self.session.close()
         except Exception as e:

@@ -87,7 +87,6 @@ class LLMManager:
 
             if text:
                 self.context.append({"role": "assistant", "content": text})
-                self._trim_context()
             return text
         except Exception as e:
             logger.error("LLM error: %s", e)
