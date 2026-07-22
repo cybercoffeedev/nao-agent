@@ -76,6 +76,11 @@ RUN curl -fsSL -o /tmp/opencode.tar.gz https://github.com/anomalyco/opencode/rel
 
 ENV PYTHONUNBUFFERED=1
 
+RUN mkdir -p /home/$USERNAME/.config/opencode \
+    /home/$USERNAME/.local/share/opencode \
+    /home/$USERNAME/.local/state/opencode \
+    && chown -R $USERNAME:$USERNAME /home/$USERNAME/.config /home/$USERNAME/.local
+
 COPY --from=builder /tmp/libqi-python/wheelhouse /tmp/wheelhouse
 
 COPY requirements.txt /tmp/requirements.txt
@@ -87,3 +92,33 @@ RUN pip install --no-cache-dir /tmp/wheelhouse/qi-*.whl \
 USER $USERNAME
 WORKDIR /home/nao-agent
 CMD ["/bin/bash"]
+
+# production configuration
+FROM python:3.13-slim as production
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    openssh-client \
+    && apt-get clean && rm -rf /var/lib/apt/lists/*
+
+RUN groupadd --gid 1000 nao \
+    && useradd --uid 1000 --gid 1000 --create-home nao -s /bin/bash
+
+COPY --from=builder /tmp/libqi-python/wheelhouse /tmp/wheelhouse
+
+COPY requirements.txt /tmp/requirements.txt
+
+RUN pip install --no-cache-dir /tmp/wheelhouse/qi-*.whl \
+    && pip install --no-cache-dir -r /tmp/requirements.txt \
+    && rm -rf /tmp/wheelhouse /tmp/requirements.txt /root/.cache
+
+COPY python /app/python
+COPY data /app/data
+
+WORKDIR /app/python
+USER nao
+
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONPATH=/app/python
+
+ENTRYPOINT ["python", "-m", "main"]
