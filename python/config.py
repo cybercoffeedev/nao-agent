@@ -56,4 +56,5 @@ class Config:
             openai_base_url=os.environ["OPENAI_BASE_URL"],
             model=os.environ["MODEL"],
             ssh_port=int(os.getenv("SSH_PORT", "22")),
+            local_wav_path=os.getenv("LOCAL_WAV_PATH", "./capture.wav"),
         )

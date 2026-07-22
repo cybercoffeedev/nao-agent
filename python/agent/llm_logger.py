@@ -2,12 +2,13 @@
 
 import json
 import logging
+import os
 from datetime import datetime, timezone
 from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
-LOG_DIR = Path(__file__).parent.parent.parent / "logs"
+LOG_DIR = Path(os.getenv("LOG_DIR", "./logs"))
 
 
 class LLMLogger:
