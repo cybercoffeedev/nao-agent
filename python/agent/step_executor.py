@@ -11,7 +11,7 @@ from robot import Robot
 logger = logging.getLogger(__name__)
 
 TOOL_TIMEOUT: int = 30
-ACTIONS_NEEDING_RESPONSE: frozenset[str] = frozenset({"web_search"})
+ACTIONS_NEEDING_RESPONSE: frozenset[str] = frozenset({"web_search", "get_status", "get_posture"})
 
 
 class StepExecutor:
@@ -42,7 +42,7 @@ class StepExecutor:
             for future in self._abandoned_futures:
                 future.cancel()
             self._abandoned_futures.clear()
-        self._executor.shutdown(wait=False)
+        self._executor.shutdown(wait=True)
 
     def _execute_action(self, action_name: str, action_args: dict) -> str:
         """Execute a single action with timeout.
@@ -113,20 +113,19 @@ class StepExecutor:
         pending_response_needed = False
 
         for step in steps:
-            if "speak" in step:
-                self.robot.set_eyes(None)
-                self.robot.speak(step["speak"])
-            elif "action" in step:
+            if "action" in step:
                 action_name: str = step["action"]
                 action_args: dict = step.get("args", {})
                 result = self._execute_action(action_name, action_args)
                 self.robot.set_eyes(None)
 
+                self.llm.add_user_message(f"[Result: {result}]")
                 if action_name in ACTIONS_NEEDING_RESPONSE:
-                    self.llm.add_user_message(f"[Wynik wyszukiwania: {result}]")
                     pending_response_needed = True
-                else:
-                    self.llm.add_user_message(f"[Wynik: {result}]")
+
+            if "speak" in step:
+                self.robot.set_eyes(None)
+                self.robot.speak(step["speak"])
 
         if pending_response_needed:
             self.robot.set_eyes("thinking")

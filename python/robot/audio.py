@@ -34,12 +34,14 @@ class _SavedHostKeyPolicy(paramiko.MissingHostKeyPolicy):
             logger.warning("Could not load known hosts: %s", e)
 
     def _save(self) -> None:
-        """Persist known hosts to disk."""
+        """Persist known hosts to disk atomically."""
         try:
             self._hosts_path.parent.mkdir(parents=True, exist_ok=True)
-            self._hosts_path.write_text(
+            tmp_path = self._hosts_path.with_suffix(".tmp")
+            tmp_path.write_text(
                 json.dumps(self._keys, indent=2), encoding="utf-8"
             )
+            tmp_path.replace(self._hosts_path)
         except OSError as e:
             logger.warning("Could not save known hosts: %s", e)
 
@@ -105,6 +107,7 @@ class RobotAudio:
 
         self._ssh: paramiko.SSHClient | None = None
         self._lock = threading.Lock()
+        self._host_key_policy = _SavedHostKeyPolicy()
 
     def _get_ssh(self) -> paramiko.SSHClient:
         """Return an active SSH connection, creating one if needed."""
@@ -117,7 +120,7 @@ class RobotAudio:
                 self._close_ssh()
 
         ssh = paramiko.SSHClient()
-        ssh.set_missing_host_key_policy(_SavedHostKeyPolicy())
+        ssh.set_missing_host_key_policy(self._host_key_policy)
         ssh.connect(
             self.ssh_host,
             port=self.ssh_port,

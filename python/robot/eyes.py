@@ -37,17 +37,18 @@ class RobotEyes:
             with self._lock:
                 mode = self.mode
                 step = self.step
+                active_mode = self._active_mode
 
             if mode == "listening":
-                if self._active_mode != "listening":
+                if active_mode != "listening":
                     self.leds.fadeRGB("FaceLeds", SPEAK_HEX_YELLOW, 0.0)
                     with self._lock:
                         self._active_mode = "listening"
             elif mode == "thinking":
-                if self._active_mode != "thinking":
+                if active_mode != "thinking":
                     with self._lock:
                         self.step = 0
-                    self._active_mode = "thinking"
+                        self._active_mode = "thinking"
                     step = 0
                 for i, intensity in enumerate(LED_INTENSITIES):
                     self.leds.setIntensity(
