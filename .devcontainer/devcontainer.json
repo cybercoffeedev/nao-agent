@@ -18,6 +18,23 @@
             "onAutoForward": "openBrowser"
         }
     },
+    "mounts": [
+        {
+            "source": "opencode-config",
+            "target": "/home/.config/opencode",
+            "type": "volume"
+        },
+        {
+            "source": "opencode-data",
+            "target": "/home/.local/share/opencode",
+            "type": "volume"
+        },
+        {
+            "source": "opencode-state",
+            "target": "/home/.local/state/opencode",
+            "type": "volume"
+        }
+    ],
     "customizations": {
         "vscode": {
             "extensions": [
