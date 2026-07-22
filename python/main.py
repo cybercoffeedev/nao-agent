@@ -5,7 +5,7 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
-from agent import RobotAgent, LLMManager, RivaASR
+from agent import RobotAgent, LLMManager, WhisperASR
 from agent.llm import build_system_prompt
 from config import Config
 from robot import Robot
@@ -41,9 +41,8 @@ def main() -> None:
         local_wav_path=config.local_wav_path,
         ssh_port=config.ssh_port,
     )
-    asr = RivaASR(
-        api_key=config.nvidia_api_key,
-        function_id=config.asr_function_id,
+    asr = WhisperASR(
+        whisper_url=config.whisper_url,
         local_wav_path=config.local_wav_path,
     )
     llm = LLMManager(

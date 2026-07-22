@@ -1,40 +1,29 @@
-"""Speech recognition using NVIDIA Riva ASR gRPC service."""
+"""Speech recognition using local whisper.cpp HTTP server."""
 
 import logging
 import os
-import wave
-
-import riva.client
+import urllib.request
+import urllib.error
+import json
 
 logger = logging.getLogger(__name__)
 
 
-class RivaASR:
-    """Speech recognition using NVIDIA Riva ASR gRPC service."""
+class WhisperASR:
+    """Speech recognition using a local whisper.cpp HTTP server."""
 
-    def __init__(self, api_key: str, function_id: str, local_wav_path: str) -> None:
-        """Initialize the NVIDIA Riva ASR client configuration.
+    def __init__(self, whisper_url: str, local_wav_path: str) -> None:
+        """Initialize the Whisper ASR client.
 
         Args:
-            api_key: The NVIDIA API key used for authentication.
-            function_id: NVIDIA Riva function ID used for the ASR service.
-            local_wav_path: Local path where the wav audio file will be saved.
+            whisper_url: Base URL of the whisper.cpp server (e.g. http://127.0.0.1:8080).
+            local_wav_path: Local path where the WAV audio file is stored.
         """
-        if not api_key:
-            raise ValueError("api_key cannot be empty")
-        if not function_id:
-            raise ValueError("function_id cannot be empty")
+        if not whisper_url:
+            raise ValueError("whisper_url cannot be empty")
 
+        self.whisper_url = whisper_url.rstrip("/")
         self.local_wav_path = local_wav_path
-        self.auth = riva.client.Auth(
-            uri="grpc.nvcf.nvidia.com:443",
-            use_ssl=True,
-            metadata_args=[
-                ["authorization", f"Bearer {api_key}"],
-                ["function-id", function_id],
-            ],
-        )
-        self._service = riva.client.ASRService(self.auth)
 
     def _cleanup(self) -> None:
         """Safely remove the local WAV file if it exists."""
@@ -45,35 +34,49 @@ class RivaASR:
             logger.warning("Could not remove WAV file: %s", e)
 
     def transcribe_audio(self) -> str:
-        """Send the audio file to Riva ASR and return the recognized text."""
-        try:
-            with wave.open(self.local_wav_path, "rb") as wav:
-                sample_rate: int = wav.getframerate()
-                channels: int = wav.getnchannels()
-                audio_data: bytes = wav.readframes(wav.getnframes())
-        except Exception as e:
-            logger.error("Error reading WAV file: %s", e)
-            self._cleanup()
+        """Send the audio file to whisper.cpp and return the recognized text."""
+        if not os.path.exists(self.local_wav_path):
+            logger.error("WAV file not found: %s", self.local_wav_path)
             return ""
 
-        config = riva.client.RecognitionConfig(
-            encoding=riva.client.AudioEncoding.LINEAR_PCM,
-            sample_rate_hertz=sample_rate,
-            language_code="pl-PL",
-            max_alternatives=1,
-            audio_channel_count=channels,
-            enable_automatic_punctuation=True,
+        boundary = "----NaOWhisperBoundary"
+        with open(self.local_wav_path, "rb") as f:
+            audio_data = f.read()
+
+        body = (
+            f"--{boundary}\r\n"
+            f'Content-Disposition: form-data; name="file"; filename="capture.wav"\r\n'
+            f"Content-Type: audio/wav\r\n\r\n"
+        ).encode() + audio_data + (
+            f"\r\n--{boundary}\r\n"
+            f'Content-Disposition: form-data; name="temperature"\r\n\r\n'
+            f"0.0\r\n"
+            f"--{boundary}\r\n"
+            f'Content-Disposition: form-data; name="temperature_inc"\r\n\r\n'
+            f"0.2\r\n"
+            f"--{boundary}\r\n"
+            f'Content-Disposition: form-data; name="response_format"\r\n\r\n'
+            f"json\r\n"
+            f"--{boundary}--\r\n"
+        ).encode()
+
+        url = f"{self.whisper_url}/inference"
+        req = urllib.request.Request(
+            url,
+            data=body,
+            headers={"Content-Type": f"multipart/form-data; boundary={boundary}"},
+            method="POST",
         )
 
         try:
-            response = self._service.offline_recognize(audio_data, config)
-            return "".join(
-                r.alternatives[0].transcript
-                for r in response.results
-                if r.alternatives
-            )
-        except Exception as e:
-            logger.error("Riva ASR error: %s", e)
+            with urllib.request.urlopen(req, timeout=60) as resp:
+                result = json.loads(resp.read().decode())
+                return result.get("text", "").strip()
+        except urllib.error.URLError as e:
+            logger.error("whisper.cpp request failed: %s", e)
+            return ""
+        except (json.JSONDecodeError, KeyError) as e:
+            logger.error("Failed to parse whisper.cpp response: %s", e)
             return ""
         finally:
             self._cleanup()

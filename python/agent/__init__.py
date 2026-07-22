@@ -2,6 +2,6 @@
 
 from .agent import RobotAgent
 from .llm import LLMManager
-from .asr import RivaASR
+from .asr import WhisperASR
 
-__all__ = ["RobotAgent", "LLMManager", "RivaASR"]
+__all__ = ["RobotAgent", "LLMManager", "WhisperASR"]

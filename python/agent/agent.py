@@ -5,7 +5,7 @@ import time
 
 import paramiko
 
-from .asr import RivaASR
+from .asr import WhisperASR
 from .llm import LLMManager
 from robot import Robot
 from .speech_detector import SpeechDetector
@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 class RobotAgent:
     """Orchestrates speech recognition, LLM and robot actions."""
 
-    def __init__(self, robot: Robot, asr: RivaASR, llm: LLMManager) -> None:
+    def __init__(self, robot: Robot, asr: WhisperASR, llm: LLMManager) -> None:
         """Initialize the robot agent.
 
         Args:
