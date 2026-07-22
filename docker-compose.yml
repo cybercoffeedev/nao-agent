@@ -1,12 +1,20 @@
+x-common: &common
+  USERNAME: dev
+  USER_UID: "1000"
+  USER_GID: "1000"
+  HOME_DIR: /home/dev
+
 services:
   dev:
     build:
       context: .
       target: dev
+      args:
+        <<: *common
     volumes:
-      - ./python:/home/nao-agent/python
-      - ./data:/home/nao-agent/data
-      - ./.env:/home/nao-agent/.env:ro
+      - .:/home/nao-agent
+      - opencode-state:/home/dev/.local/state/opencode
+      - opencode-share:/home/dev/.local/share/opencode
     env_file: .env
     stdin_open: true
     tty: true
@@ -26,3 +34,7 @@ services:
     tmpfs:
       - /tmp
       - /app/logs
+
+volumes:
+  opencode-state:
+  opencode-share:

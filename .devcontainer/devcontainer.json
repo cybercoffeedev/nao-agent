@@ -1,17 +1,10 @@
 {
     "name": "nao-devcontainer",
-    "build": {
-        "dockerfile": "../Dockerfile",
-        "target": "dev",
-        "args": {
-            "USERNAME": "dev",
-            "USER_UID": "1000",
-            "USER_GID": "1000"
-        }
-    },
-    "remoteUser": "dev",
-    "workspaceMount": "source=${localWorkspaceFolder},target=/home/dev/nao-agent,type=bind",
-    "workspaceFolder": "/home/dev/nao-agent",
+    "dockerComposeFile": [
+        "../docker-compose.yml"
+    ],
+    "service": "dev",
+    "workspaceFolder": "/home/nao-agent",
     "forwardPorts": [4096],
     "portsAttributes": {
         "4096": {
@@ -19,24 +12,6 @@
             "onAutoForward": "openBrowser"
         }
     },
-    "mounts": [
-        {
-            "source": "opencode-config",
-            "target": "/home/dev/.config/opencode",
-            "type": "volume"
-        },
-        {
-            "source": "opencode-data",
-            "target": "/home/dev/.local/share/opencode",
-            "type": "volume"
-        },
-        {
-            "source": "opencode-state",
-            "target": "/home/dev/.local/state/opencode",
-            "type": "volume"
-        }
-    ],
-    "postCreateCommand": "sudo chown -R dev:dev /home/dev/.config /home/dev/.local",
     "customizations": {
         "vscode": {
             "extensions": [

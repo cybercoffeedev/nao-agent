@@ -58,6 +58,7 @@ FROM python:3.13-slim as dev
 ARG USERNAME=dev
 ARG USER_UID=1000
 ARG USER_GID=$USER_UID
+ARG HOME_DIR=/home/dev
 
 RUN groupadd --gid $USER_GID $USERNAME \
     && useradd --uid $USER_UID --gid $USER_GID -m $USERNAME -s /bin/bash \
@@ -76,10 +77,10 @@ RUN curl -fsSL -o /tmp/opencode.tar.gz https://github.com/anomalyco/opencode/rel
 
 ENV PYTHONUNBUFFERED=1
 
-RUN mkdir -p /home/$USERNAME/.config/opencode \
-    /home/$USERNAME/.local/share/opencode \
-    /home/$USERNAME/.local/state/opencode \
-    && chown -R $USERNAME:$USERNAME /home/$USERNAME/.config /home/$USERNAME/.local
+RUN mkdir -p $HOME_DIR/.config/opencode \
+    $HOME_DIR/.local/share/opencode \
+    $HOME_DIR/.local/state/opencode \
+    && chown -R $USERNAME:$USERNAME $HOME_DIR/.config $HOME_DIR/.local
 
 COPY --from=builder /tmp/libqi-python/wheelhouse /tmp/wheelhouse
 
