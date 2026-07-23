@@ -55,10 +55,9 @@ RUN auditwheel repair \
 # dev configuration
 FROM python:3.13-slim as dev
 
-ARG USERNAME=dev
+ARG USERNAME
 ARG USER_UID=1000
 ARG USER_GID=$USER_UID
-ARG HOME_DIR=/home/dev
 
 RUN groupadd --gid $USER_GID $USERNAME \
     && useradd --uid $USER_UID --gid $USER_GID -m $USERNAME -s /bin/bash \
@@ -77,11 +76,6 @@ RUN curl -fsSL -o /tmp/opencode.tar.gz https://github.com/anomalyco/opencode/rel
 
 ENV PYTHONUNBUFFERED=1
 
-RUN mkdir -p $HOME_DIR/.config/opencode \
-    $HOME_DIR/.local/share/opencode \
-    $HOME_DIR/.local/state/opencode \
-    && chown -R $USERNAME:$USERNAME $HOME_DIR/.config $HOME_DIR/.local
-
 COPY --from=builder /tmp/libqi-python/wheelhouse /tmp/wheelhouse
 
 COPY requirements.txt /tmp/requirements.txt
@@ -90,8 +84,11 @@ RUN pip install --no-cache-dir /tmp/wheelhouse/qi-*.whl \
     && pip install --no-cache-dir -r /tmp/requirements.txt \
     && rm -rf /tmp/wheelhouse /tmp/requirements.txt
 
+RUN mkdir -p /home/$USERNAME/.local/share /home/$USERNAME/.local/state /home/$USERNAME/.config \
+    && chown -R $USERNAME:$USERNAME /home/$USERNAME/.local /home/$USERNAME/.config
+
 USER $USERNAME
-WORKDIR /home/nao-agent
+WORKDIR /workspace/nao-agent
 CMD ["/bin/bash"]
 
 # production configuration

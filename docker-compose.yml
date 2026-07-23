@@ -1,21 +1,19 @@
-x-common: &common
-  USERNAME: dev
-  USER_UID: "1000"
-  USER_GID: "1000"
-  HOME_DIR: /home/dev
-
 services:
   dev:
     build:
       context: .
       target: dev
       args:
-        <<: *common
+        USERNAME: ${USERNAME:-dev}
+        USER_UID: "1000"
+        USER_GID: "1000"
     volumes:
-      - .:/home/nao-agent
-      - opencode-state:/home/dev/.local/state/opencode
-      - opencode-share:/home/dev/.local/share/opencode
+      - .:/workspace/nao-agent
+      - ~/.config/opencode:/home/${USERNAME:-dev}/.config/opencode
+      - ~/.local/share/opencode:/home/${USERNAME:-dev}/.local/share/opencode
     env_file: .env
+    environment:
+      - USERNAME=${USERNAME:-dev}
     stdin_open: true
     tty: true
 
@@ -35,6 +33,3 @@ services:
       - /tmp
       - /app/logs
 
-volumes:
-  opencode-state:
-  opencode-share:
