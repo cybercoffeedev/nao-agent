@@ -7,15 +7,12 @@ services:
         USERNAME: ${USERNAME:-dev}
         USER_UID: "1000"
         USER_GID: "1000"
-    volumes:
-      - .:/workspace/nao-agent
-      - ~/.config/opencode:/home/${USERNAME:-dev}/.config/opencode
-      - ~/.local/share/opencode:/home/${USERNAME:-dev}/.local/share/opencode
-    env_file: .env
-    environment:
-      - USERNAME=${USERNAME:-dev}
     stdin_open: true
     tty: true
+    volumes:
+      - .:/workspace/nao-agent
+      - ./.opencode/config:/home/${USERNAME:-dev}/.config/opencode
+      - ./.opencode/data:/home/${USERNAME:-dev}/.local/share/opencode
 
   production:
     build:
@@ -32,4 +29,3 @@ services:
     tmpfs:
       - /tmp
       - /app/logs
-

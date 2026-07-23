@@ -4,6 +4,7 @@
         "../docker-compose.yml"
     ],
     "service": "dev",
+    "runServices": ["dev"],
     "workspaceFolder": "/workspace/nao-agent",
     "forwardPorts": [4096],
     "portsAttributes": {
