@@ -20,8 +20,6 @@ class SpeechDetector:
         Args:
             robot: Robot instance with audio services.
         """
-        if robot is None:
-            raise ValueError("robot cannot be None")
         self.robot = robot
 
     def listen(self) -> None:

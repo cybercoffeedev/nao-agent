@@ -14,6 +14,15 @@ def action(description: str) -> Callable:
     return decorator
 
 
+def get_action_descriptions() -> dict[str, str]:
+    """Return action names and descriptions from @action decorators."""
+    return {
+        name: method._action_description  # type: ignore[attr-defined]
+        for name, method in RobotActions.__dict__.items()
+        if callable(method) and hasattr(method, "_action_description")
+    }
+
+
 class RobotActions:
     """Manages robot actions like waving, sitting, standing, etc."""
 
@@ -30,11 +39,6 @@ class RobotActions:
         self.background_movement = session.service("ALBackgroundMovement")
         self.listening_movement = session.service("ALListeningMovement")
         self.basic_awareness = session.service("ALBasicAwareness")
-        self._actions: dict[str, str] = {
-            name: method._action_description  # type: ignore[attr-defined]
-            for name, method in self.__class__.__dict__.items()
-            if callable(method) and hasattr(method, "_action_description")
-        }
 
     @action("Wave your right hand in greeting.")
     def wave_right_hand(self) -> str:
@@ -152,7 +156,7 @@ class RobotActions:
         Returns:
             Action result string.
         """
-        if name not in self._actions:
+        if name not in ACTION_DESCRIPTIONS:
             return f"Unknown action: {name}"
 
         method = getattr(self, name)
@@ -167,10 +171,4 @@ class RobotActions:
         return method(*args)
 
 
-def get_action_descriptions() -> dict[str, str]:
-    """Return action names and descriptions from @action decorators."""
-    return {
-        name: method._action_description  # type: ignore[attr-defined]
-        for name, method in RobotActions.__dict__.items()
-        if callable(method) and hasattr(method, "_action_description")
-    }
+ACTION_DESCRIPTIONS: dict[str, str] = get_action_descriptions()

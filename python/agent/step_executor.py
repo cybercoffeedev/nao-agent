@@ -24,11 +24,6 @@ class StepExecutor:
             robot: Robot instance for executing actions.
             llm: LLM manager for adding context and generating responses.
         """
-        if robot is None:
-            raise ValueError("robot cannot be None")
-        if llm is None:
-            raise ValueError("llm cannot be None")
-
         self.robot = robot
         self.llm = llm
         self.parser = ResponseParser()
@@ -104,13 +99,11 @@ class StepExecutor:
         steps = self.parser.parse_steps(raw)
 
         if not steps or not isinstance(steps, list):
-            self.robot.set_eyes(None)
-            cleaned = self.parser.clean_for_tts(raw)
-            if cleaned:
-                self.robot.speak(cleaned)
+            self._speak_response(None, raw)
             return
 
         pending_response_needed = False
+        action_results: list[str] = []
 
         for step in steps:
             if "action" in step:
@@ -119,13 +112,16 @@ class StepExecutor:
                 result = self._execute_action(action_name, action_args)
                 self.robot.set_eyes(None)
 
-                self.llm.add_user_message(f"[Result: {result}]")
+                action_results.append(f"[Result: {result}]")
                 if action_name in ACTIONS_NEEDING_RESPONSE:
                     pending_response_needed = True
 
             if "speak" in step:
                 self.robot.set_eyes(None)
                 self.robot.speak(step["speak"])
+
+        if action_results:
+            self.llm.add_user_message("\n".join(action_results))
 
         if pending_response_needed:
             self.robot.set_eyes("thinking")

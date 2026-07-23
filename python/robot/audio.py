@@ -113,11 +113,13 @@ class RobotAudio:
         """Return an active SSH connection, creating one if needed."""
         if self._ssh is not None:
             try:
-                self._ssh.exec_command("echo ok", timeout=5)
-                return self._ssh
-            except Exception:
-                logger.debug("SSH connection stale, reconnecting...")
-                self._close_ssh()
+                transport = self._ssh.get_transport()
+                if transport and transport.is_active():
+                    return self._ssh
+            except (paramiko.SSHException, OSError):
+                pass
+            logger.debug("SSH connection stale, reconnecting...")
+            self._close_ssh()
 
         ssh = paramiko.SSHClient()
         ssh.set_missing_host_key_policy(self._host_key_policy)
@@ -135,7 +137,7 @@ class RobotAudio:
         if self._ssh is not None:
             try:
                 self._ssh.close()
-            except Exception:
+            except (paramiko.SSHException, OSError):
                 pass
             self._ssh = None
 

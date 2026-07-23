@@ -33,14 +33,6 @@ class ResponseParser:
             except json.JSONDecodeError:
                 continue
 
-        match = re.search(r"\[.*\]", raw, re.DOTALL)
-        if match:
-            try:
-                result = json.loads(match.group())
-                if isinstance(result, list):
-                    return result
-            except json.JSONDecodeError:
-                pass
         return None
 
     @staticmethod
@@ -64,20 +56,3 @@ class ResponseParser:
         cleaned = re.sub(r"[{}\[\]\":]", "", cleaned)
         cleaned = re.sub(r"\s+", " ", cleaned).strip()
         return cleaned
-
-    @staticmethod
-    def extract_speak_text(raw: str) -> str | None:
-        """Extract speak text from LLM response.
-
-        Args:
-            raw: Raw LLM response text.
-
-        Returns:
-            Extracted speak text, or None if not found.
-        """
-        steps = ResponseParser.parse_steps(raw)
-        if steps and isinstance(steps, list):
-            for step in steps:
-                if "speak" in step:
-                    return step["speak"]
-        return None

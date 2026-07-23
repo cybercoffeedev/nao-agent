@@ -2,9 +2,8 @@
 
 import logging
 import os
-import urllib.request
-import urllib.error
-import json
+
+import httpx
 
 logger = logging.getLogger(__name__)
 
@@ -39,43 +38,25 @@ class WhisperASR:
             logger.error("WAV file not found: %s", self.local_wav_path)
             return ""
 
-        boundary = "----NaOWhisperBoundary"
-        with open(self.local_wav_path, "rb") as f:
-            audio_data = f.read()
-
-        body = (
-            f"--{boundary}\r\n"
-            f'Content-Disposition: form-data; name="file"; filename="capture.wav"\r\n'
-            f"Content-Type: audio/wav\r\n\r\n"
-        ).encode() + audio_data + (
-            f"\r\n--{boundary}\r\n"
-            f'Content-Disposition: form-data; name="temperature"\r\n\r\n'
-            f"0.0\r\n"
-            f"--{boundary}\r\n"
-            f'Content-Disposition: form-data; name="temperature_inc"\r\n\r\n'
-            f"0.2\r\n"
-            f"--{boundary}\r\n"
-            f'Content-Disposition: form-data; name="response_format"\r\n\r\n'
-            f"json\r\n"
-            f"--{boundary}--\r\n"
-        ).encode()
-
         url = f"{self.whisper_url}/inference"
-        req = urllib.request.Request(
-            url,
-            data=body,
-            headers={"Content-Type": f"multipart/form-data; boundary={boundary}"},
-            method="POST",
-        )
-
         try:
-            with urllib.request.urlopen(req, timeout=60) as resp:
-                result = json.loads(resp.read().decode())
-                return result.get("text", "").strip()
-        except urllib.error.URLError as e:
+            with open(self.local_wav_path, "rb") as f:
+                response = httpx.post(
+                    url,
+                    files={"file": ("capture.wav", f, "audio/wav")},
+                    data={
+                        "temperature": "0.0",
+                        "temperature_inc": "0.2",
+                        "response_format": "json",
+                    },
+                    timeout=60.0,
+                )
+            response.raise_for_status()
+            return response.json().get("text", "").strip()
+        except httpx.HTTPError as e:
             logger.error("whisper.cpp request failed: %s", e)
             return ""
-        except (json.JSONDecodeError, KeyError) as e:
+        except (ValueError, KeyError) as e:
             logger.error("Failed to parse whisper.cpp response: %s", e)
             return ""
         finally:

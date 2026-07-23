@@ -1,6 +1,7 @@
 """Main robot class that manages connection and delegates to submodules."""
 
 import logging
+import threading
 from typing import Any
 
 import qi
@@ -24,8 +25,8 @@ class Robot:
         port: int,
         username: str,
         password: str,
-        remote_wav_path: str,
         local_wav_path: str,
+        remote_wav_path: str = "/home/nao/capture.wav",
         ssh_port: int = 22,
     ) -> None:
         """Initialize NAO robot configuration parameters.
@@ -35,8 +36,8 @@ class Robot:
             port: Port of the NAOqi service.
             username: SSH/SFTP username.
             password: SSH/SFTP password.
-            remote_wav_path: File path where wav audio is recorded on the robot.
             local_wav_path: File path where wav audio is downloaded locally.
+            remote_wav_path: File path where wav audio is recorded on the robot.
             ssh_port: SSH port for file transfer.
         """
         if not ip:
@@ -46,8 +47,8 @@ class Robot:
         self.port = port
         self.username = username
         self.password = password
-        self.remote_wav_path = remote_wav_path
         self.local_wav_path = local_wav_path
+        self.remote_wav_path = remote_wav_path
         self.ssh_port = ssh_port
         self.session: qi.Session | None = None
         self.eyes: RobotEyes | None = None
@@ -58,6 +59,7 @@ class Robot:
         self._speech_reco: Any = None
         self._memory: Any = None
         self._tts_service: Any = None
+        self._reconnect_lock = threading.Lock()
 
     def connect(self) -> None:
         """Establish tcp session connection to robot and register AL services."""
@@ -89,7 +91,7 @@ class Robot:
         self._speech_reco.setLanguage("Polish")
         try:
             self._speech_reco.unsubscribe("SpeechDetector")
-        except Exception:
+        except RuntimeError:
             pass
         self._speech_reco.pause(True)
         self._speech_reco.setVocabulary(["NAO"], False)
@@ -97,15 +99,16 @@ class Robot:
 
     def reconnect(self) -> None:
         """Reconnect to robot after socket failure."""
-        logger.warning("Attempting to reconnect to robot...")
-        try:
-            if self.session:
-                self.session.close()
-        except Exception:
-            pass
-        self.session = None
-        self.connect()
-        logger.info("Reconnected to robot successfully.")
+        with self._reconnect_lock:
+            logger.warning("Attempting to reconnect to robot...")
+            try:
+                if self.session:
+                    self.session.close()
+            except RuntimeError:
+                pass
+            self.session = None
+            self.connect()
+            logger.info("Reconnected to robot successfully.")
 
     def set_eyes(self, mode: str | None) -> None:
         """Shorthand for controlling the robot's eye animation mode."""
@@ -137,41 +140,37 @@ class Robot:
         try:
             return self.actions.execute(name, *args, **kwargs)
         except RuntimeError as e:
-            if self._is_socket_error(e):
+            if self.is_socket_error(e):
                 logger.warning("Socket lost during action '%s', reconnecting...", name)
                 self.reconnect()
                 return self.actions.execute(name, *args, **kwargs)
             raise
 
+    def _audio_op(self, method: str, *args: Any, **kwargs: Any) -> Any:
+        """Execute an audio method if connected, otherwise log a warning."""
+        if self._audio is None:
+            logger.warning("Cannot %s - robot not connected", method)
+            return False
+        return getattr(self._audio, method)(*args, **kwargs)
+
     def download_audio(self) -> None:
         """Download recorded audio from robot via SFTP."""
-        if self._audio is None:
-            logger.warning("Cannot download audio - robot not connected")
-            return
-        self._audio.download_audio(self.local_wav_path)
+        self._audio_op("download_audio", self.local_wav_path)
 
     def start_recording(self) -> None:
         """Start recording audio from robot's microphone."""
-        if self._audio is None:
-            logger.warning("Cannot start recording - robot not connected")
-            return
-        self._audio.start_recording()
+        self._audio_op("start_recording")
 
     def stop_recording(self) -> None:
         """Stop recording audio."""
-        if self._audio is None:
-            logger.warning("Cannot stop recording - robot not connected")
-            return
-        self._audio.stop_recording()
+        self._audio_op("stop_recording")
 
     def is_speech_detected(self) -> bool:
         """Check if speech is currently detected."""
-        if self._audio is None:
-            return False
-        return self._audio.is_speech_detected()
+        return self._audio_op("is_speech_detected")
 
     @staticmethod
-    def _is_socket_error(error: Exception) -> bool:
+    def is_socket_error(error: Exception) -> bool:
         """Check if an error is a socket/connection error."""
         error_str = str(error).lower()
         return any(keyword.lower() in error_str for keyword in RECONNECT_ERROR_KEYWORDS)

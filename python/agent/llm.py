@@ -1,12 +1,14 @@
 """LLM conversation manager using OpenAI-compatible API."""
 
 import logging
+import time
 
 from openai import OpenAI
 
-from .llm_logger import LLMLogger
-
 logger = logging.getLogger(__name__)
+
+MAX_RETRIES: int = 3
+BASE_DELAY: float = 1.0
 
 CORE_SYSTEM_PROMPT = """\
 You are a voice assistant for a NAO robot. Always respond in the same language as the user.
@@ -72,23 +74,22 @@ class LLMManager:
             raise ValueError("model cannot be empty")
 
         self.model = model
-        self.client = OpenAI(base_url=url, api_key=api_key, timeout=30.0)
+        self.client = OpenAI(base_url=url, api_key=api_key, timeout=30.0, max_retries=0)
         self.max_turns = max_turns
         self.context: list[dict[str, str]] = [{"role": "system", "content": system_msg}]
-        self._logger = LLMLogger()
 
     def _trim_context(self) -> None:
-        """Trim context to keep only the most recent turns."""
-        user_count = sum(1 for m in self.context if m.get("role") == "user")
-        if user_count <= self.max_turns:
+        """Trim context to keep the most recent assistant turns."""
+        assistant_count = sum(1 for m in self.context if m.get("role") == "assistant")
+        if assistant_count <= self.max_turns:
             return
 
+        target = assistant_count - self.max_turns
         count = 0
-        cutoff = user_count - self.max_turns + 1
         for i, msg in enumerate(self.context):
-            if msg.get("role") == "user":
+            if msg.get("role") == "assistant":
                 count += 1
-                if count == cutoff:
+                if count == target:
                     self.context = [self.context[0]] + self.context[i:]
                     return
 
@@ -98,32 +99,36 @@ class LLMManager:
         self._trim_context()
 
     def generate_response(self) -> str:
-        """Generate a response from the LLM.
+        """Generate a response from the LLM with retry.
 
         Returns:
             The generated response text, or empty string on error.
         """
-        try:
-            completion = self.client.chat.completions.create(
-                model=self.model,
-                messages=self.context,
-                stream=False,
-                max_tokens=8192,
-            )
-            if not completion.choices:
-                logger.error("LLM returned no choices")
-                return ""
-            text: str = completion.choices[0].message.content or ""
+        for attempt in range(MAX_RETRIES):
+            try:
+                completion = self.client.chat.completions.create(
+                    model=self.model,
+                    messages=self.context,
+                    max_tokens=256,
+                    stream=False,
+                )
+                if not completion.choices:
+                    logger.error("LLM returned no choices")
+                    return ""
+                text: str = completion.choices[0].message.content or ""
 
-            self._logger.log(
-                {"model": self.model, "messages": self.context},
-                text,
-            )
-
-            if text:
-                self.context.append({"role": "assistant", "content": text})
-                self._trim_context()
-            return text
-        except Exception as e:
-            logger.error("LLM error: %s", e)
-            return ""
+                if text:
+                    self.context.append({"role": "assistant", "content": text})
+                    self._trim_context()
+                return text
+            except Exception as e:
+                if attempt < MAX_RETRIES - 1:
+                    delay = BASE_DELAY * (2 ** attempt)
+                    logger.warning(
+                        "LLM error (attempt %d/%d), retrying in %.1fs: %s",
+                        attempt + 1, MAX_RETRIES, delay, e,
+                    )
+                    time.sleep(delay)
+                else:
+                    logger.error("LLM error after %d attempts: %s", MAX_RETRIES, e)
+                    return ""

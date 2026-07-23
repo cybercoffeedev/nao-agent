@@ -9,7 +9,7 @@ from agent import RobotAgent, LLMManager, WhisperASR
 from agent.llm import build_system_prompt
 from config import Config
 from robot import Robot
-from robot.actions import get_action_descriptions
+from robot.actions import ACTION_DESCRIPTIONS
 
 logger = logging.getLogger(__name__)
 
@@ -37,7 +37,6 @@ def main() -> None:
         port=config.robot_port,
         username=config.robot_username,
         password=config.robot_password,
-        remote_wav_path=config.remote_wav_path,
         local_wav_path=config.local_wav_path,
         ssh_port=config.ssh_port,
     )
@@ -50,7 +49,7 @@ def main() -> None:
         url=config.openai_base_url,
         model=config.model,
         system_msg=build_system_prompt(
-            actions=get_action_descriptions(),
+            actions=ACTION_DESCRIPTIONS,
             user_prompt=load_user_prompt(),
         ),
     )

@@ -39,6 +39,9 @@ class RobotEyes:
                 step = self.step
                 active_mode = self._active_mode
 
+            if mode is None:
+                return
+
             if mode == "listening":
                 if active_mode != "listening":
                     self.leds.fadeRGB("FaceLeds", SPEAK_HEX_YELLOW, 0.0)
@@ -55,7 +58,8 @@ class RobotEyes:
                         self.leds_list[(step - i) % FACE_LEDS_COUNT], intensity
                     )
                 with self._lock:
-                    self.step = step + 1
+                    if self.mode == mode:
+                        self.step = step + 1
         except RuntimeError:
             pass
 
@@ -66,19 +70,16 @@ class RobotEyes:
             mode: Target animation mode or None to deactivate.
         """
         with self._lock:
-            running = self._running
+            was_running = self._running
             self.mode = mode
             self._active_mode = None
-            self._running = False
+            self.step = 0
+            self._running = mode is not None
 
-        if running:
+        if was_running:
             self.task.stop()
 
         if not mode:
             self.leds.setIntensity("FaceLeds", 1.0)
         else:
-            with self._lock:
-                self.step = 0
             self.task.start(True)
-            with self._lock:
-                self._running = True

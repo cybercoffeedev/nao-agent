@@ -25,13 +25,6 @@ class RobotAgent:
             asr: Speech recognition service.
             llm: Language model manager.
         """
-        if robot is None:
-            raise ValueError("robot cannot be None")
-        if asr is None:
-            raise ValueError("asr cannot be None")
-        if llm is None:
-            raise ValueError("llm cannot be None")
-
         self.robot = robot
         self.asr = asr
         self.llm = llm
@@ -56,12 +49,12 @@ class RobotAgent:
                         response = self.llm.generate_response()
                         logger.info("LLM: %s", response[:200] if response else "")
                         self.step_executor.execute(response)
-                    time.sleep(1.0)
+                    time.sleep(0.5 if not text else 1.0)
                 except ConnectionError as e:
                     logger.warning("Connection lost, reconnecting to robot... %s", e)
                     self.robot.reconnect()
                 except RuntimeError as e:
-                    if self.robot._is_socket_error(e):
+                    if self.robot.is_socket_error(e):
                         logger.warning("Socket lost, reconnecting to robot...")
                         self.robot.reconnect()
                     else:

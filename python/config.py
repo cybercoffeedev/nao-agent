@@ -16,7 +16,6 @@ class Config:
     whisper_url: str = ""
     openai_base_url: str = ""
     model: str = ""
-    remote_wav_path: str = "/home/nao/capture.wav"
     local_wav_path: str = "./capture.wav"
     ssh_port: int = 22
 
@@ -40,21 +39,15 @@ class Config:
         Raises:
             ValueError: If required environment variables are missing.
         """
-        required_vars = ("ROBOT_IP", "NVIDIA_API_KEY", "WHISPER_URL",
-                         "OPENAI_BASE_URL", "MODEL")
-        missing = [var for var in required_vars if not os.environ.get(var)]
-        if missing:
-            raise ValueError(f"Missing required environment variables: {', '.join(missing)}")
-
         return cls(
-            robot_ip=os.environ["ROBOT_IP"],
+            robot_ip=os.environ.get("ROBOT_IP", ""),
             robot_port=int(os.getenv("ROBOT_PORT", "9559")),
             robot_username=os.getenv("ROBOT_USERNAME", ""),
             robot_password=os.getenv("ROBOT_PASSWORD", ""),
-            nvidia_api_key=os.environ["NVIDIA_API_KEY"],
-            whisper_url=os.environ["WHISPER_URL"],
-            openai_base_url=os.environ["OPENAI_BASE_URL"],
-            model=os.environ["MODEL"],
+            nvidia_api_key=os.environ.get("NVIDIA_API_KEY", ""),
+            whisper_url=os.environ.get("WHISPER_URL", ""),
+            openai_base_url=os.environ.get("OPENAI_BASE_URL", ""),
+            model=os.environ.get("MODEL", ""),
             ssh_port=int(os.getenv("SSH_PORT", "22")),
             local_wav_path=os.getenv("LOCAL_WAV_PATH", "./capture.wav"),
         )
