@@ -5,7 +5,7 @@ import threading
 from concurrent.futures import Future, ThreadPoolExecutor, TimeoutError as FuturesTimeoutError
 
 from .llm import LLMManager
-from .response_parser import ResponseParser
+from .response_parser import parse_steps, clean_for_tts
 from robot import Robot
 
 logger = logging.getLogger(__name__)
@@ -26,7 +26,6 @@ class StepExecutor:
         """
         self.robot = robot
         self.llm = llm
-        self.parser = ResponseParser()
         self._executor = ThreadPoolExecutor(max_workers=1)
         self._abandoned_futures: list[Future] = []
         self._lock = threading.Lock()
@@ -67,6 +66,11 @@ class StepExecutor:
             logger.error(result)
             return result
 
+    def _speak(self, text: str) -> None:
+        """Turn off eyes and speak text."""
+        self.robot.set_eyes(None)
+        self.robot.speak(text)
+
     def _speak_response(self, steps: list[dict] | None, raw: str) -> None:
         """Extract and speak text from LLM response without executing actions.
 
@@ -77,14 +81,12 @@ class StepExecutor:
         if steps:
             for step in steps:
                 if "speak" in step:
-                    self.robot.set_eyes(None)
-                    self.robot.speak(step["speak"])
+                    self._speak(step["speak"])
                     return
 
-        cleaned = self.parser.clean_for_tts(raw)
+        cleaned = clean_for_tts(raw)
         if cleaned:
-            self.robot.set_eyes(None)
-            self.robot.speak(cleaned)
+            self._speak(cleaned)
 
     def execute(self, raw: str) -> None:
         """Parse JSON steps from LLM and execute them.
@@ -96,7 +98,7 @@ class StepExecutor:
         Args:
             raw: Raw LLM response text containing steps.
         """
-        steps = self.parser.parse_steps(raw)
+        steps = parse_steps(raw)
 
         if not steps or not isinstance(steps, list):
             self._speak_response(None, raw)
@@ -117,8 +119,7 @@ class StepExecutor:
                     pending_response_needed = True
 
             if "speak" in step:
-                self.robot.set_eyes(None)
-                self.robot.speak(step["speak"])
+                self._speak(step["speak"])
 
         if action_results:
             self.llm.add_user_message("\n".join(action_results))
@@ -128,6 +129,6 @@ class StepExecutor:
             response = self.llm.generate_response()
             logger.info("LLM: %s", response[:200] if response else "")
             if response:
-                response_steps = self.parser.parse_steps(response)
+                response_steps = parse_steps(response)
                 self._speak_response(response_steps, response)
             self.robot.set_eyes(None)

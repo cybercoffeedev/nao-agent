@@ -9,7 +9,6 @@ import qi
 from .actions import RobotActions
 from .audio import RobotAudio
 from .eyes import RobotEyes
-from .tts import RobotTTS
 
 logger = logging.getLogger(__name__)
 
@@ -54,7 +53,6 @@ class Robot:
         self.eyes: RobotEyes | None = None
         self.actions: RobotActions | None = None
         self._audio: RobotAudio | None = None
-        self.tts: RobotTTS | None = None
         self._audio_recorder: Any = None
         self._speech_reco: Any = None
         self._memory: Any = None
@@ -86,8 +84,6 @@ class Robot:
             ssh_password=self.password,
             ssh_port=self.ssh_port,
         )
-        self.tts = RobotTTS(self._tts_service)
-
         self._speech_reco.setLanguage("Polish")
         try:
             self._speech_reco.unsubscribe("SpeechDetector")
@@ -110,19 +106,26 @@ class Robot:
             self.connect()
             logger.info("Reconnected to robot successfully.")
 
+    def _delegate(self, name: str, component: Any, method: str, *args: Any, **kwargs: Any) -> Any:
+        """Execute a method on a component if connected, otherwise log a warning."""
+        if component is None:
+            logger.warning("Cannot %s - robot not connected", name)
+            return False
+        return getattr(component, method)(*args, **kwargs)
+
     def set_eyes(self, mode: str | None) -> None:
         """Shorthand for controlling the robot's eye animation mode."""
-        if self.eyes is None:
-            logger.warning("Cannot set eyes - robot not connected")
-            return
-        self.eyes.set(mode)
+        self._delegate("set eyes", self.eyes, "set", mode)
 
     def speak(self, text: str) -> None:
         """Say provided message with built-in TTS."""
-        if self.tts is None:
+        if self._tts_service is None:
             logger.warning("Cannot speak - robot not connected")
             return
-        self.tts.speak(text)
+        try:
+            self._tts_service.say(text)
+        except RuntimeError as e:
+            logger.error("Couldn't say the message: %s", e)
 
     def execute_action(self, name: str, *args: Any, **kwargs: Any) -> str:
         """Execute a named action from the ACTIONS registry.
@@ -148,10 +151,7 @@ class Robot:
 
     def _audio_op(self, method: str, *args: Any, **kwargs: Any) -> Any:
         """Execute an audio method if connected, otherwise log a warning."""
-        if self._audio is None:
-            logger.warning("Cannot %s - robot not connected", method)
-            return False
-        return getattr(self._audio, method)(*args, **kwargs)
+        return self._delegate(method, self._audio, method, *args, **kwargs)
 
     def download_audio(self) -> None:
         """Download recorded audio from robot via SFTP."""

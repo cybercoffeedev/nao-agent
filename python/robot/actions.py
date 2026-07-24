@@ -68,45 +68,36 @@ class RobotActions:
         self.listening_movement.setEnabled(enabled)
         self.basic_awareness.setEnabled(enabled)
 
+    def _change_posture(
+        self, posture_name: str, family_name: str,
+        autonomous_moves: bool, already_msg: str, done_msg: str,
+    ) -> str:
+        """Change robot posture if not already in target state."""
+        if self.posture.getPostureFamily() == family_name:
+            return already_msg
+        self._set_autonomous_moves(autonomous_moves)
+        self.posture.goToPosture(posture_name, 0.8)
+        return done_msg
+
     @action("Make the robot sit down.")
     def sit_down(self) -> str:
         """Make the robot sit down."""
-        family: str = self.posture.getPostureFamily()
-        if family == "Sitting":
-            return "Already sitting."
-        self._set_autonomous_moves(True)
-        self.posture.goToPosture("Sit", 0.8)
-        return "Sat down."
+        return self._change_posture("Sit", "Sitting", True, "Already sitting.", "Sat down.")
 
     @action("Make the robot stand up.")
     def stand_up(self) -> str:
         """Make the robot stand up."""
-        family: str = self.posture.getPostureFamily()
-        if family == "Standing":
-            return "Already standing."
-        self._set_autonomous_moves(True)
-        self.posture.goToPosture("StandInit", 0.8)
-        return "Stood up."
+        return self._change_posture("StandInit", "Standing", True, "Already standing.", "Stood up.")
 
     @action("Make the robot lie down on its stomach.")
     def lie_on_stomach(self) -> str:
         """Make the robot lie on stomach."""
-        family: str = self.posture.getPostureFamily()
-        if family == "LyingBelly":
-            return "Already lying on stomach."
-        self._set_autonomous_moves(False)
-        self.posture.goToPosture("LyingBelly", 0.8)
-        return "Lying on stomach."
+        return self._change_posture("LyingBelly", "LyingBelly", False, "Already lying on stomach.", "Lying on stomach.")
 
     @action("Make the robot lie down on its back.")
     def lie_on_back(self) -> str:
         """Make the robot lie on back."""
-        family: str = self.posture.getPostureFamily()
-        if family == "LyingBack":
-            return "Already lying on back."
-        self._set_autonomous_moves(False)
-        self.posture.goToPosture("LyingBack", 0.8)
-        return "Lying on back."
+        return self._change_posture("LyingBack", "LyingBack", False, "Already lying on back.", "Lying on back.")
 
     @action("Check the robot's status including battery, charging state, and CPU temperature.")
     def get_status(self) -> str:
