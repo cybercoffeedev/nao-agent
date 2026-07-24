@@ -131,7 +131,7 @@ class RobotActions:
         try:
             results: list[dict] = DDGS(timeout=10).text(query, max_results=3)
             if results:
-                return "\n".join(r["body"] for r in results)
+                return "\n".join(r["body"][:300] for r in results)
             return "No results found."
         except (OSError, ValueError) as e:
             return f"Search error: {e}"
