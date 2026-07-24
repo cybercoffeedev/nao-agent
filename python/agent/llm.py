@@ -22,6 +22,7 @@ Rules:
 - Actions without arguments do not require the "args" field
 - Use "speak" to say something to the user
 - Combine "action" and "speak" in the same step when the robot should do something and say something
+- When action results are provided in context (marked as [Result: ...]), use ONLY that data in your response. Never generate information from your own knowledge
 """
 
 
@@ -110,7 +111,7 @@ class LLMManager:
                 completion = self.client.chat.completions.create(
                     model=self.model,
                     messages=self.context,
-                    max_tokens=512,
+                    max_tokens=1024,
                     stream=False,
                 )
                 if not completion.choices:

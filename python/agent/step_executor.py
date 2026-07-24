@@ -72,13 +72,20 @@ class StepExecutor:
         self.robot.speak(text)
 
     def _speak_response(self, steps: list[dict] | None, raw: str) -> None:
-        """Extract and speak text from LLM response without executing actions.
+        """Execute actions and speak text from secondary LLM response.
+
+        Actions are executed first, then speak. This allows recovery from
+        a malformed primary response (e.g. missing args).
 
         Args:
             steps: Already parsed steps (to avoid double parsing).
             raw: Raw LLM response text for fallback cleaning.
         """
         if steps:
+            for step in steps:
+                if "action" in step:
+                    self._execute_action(step["action"], step.get("args", {}))
+                    self.robot.set_eyes(None)
             for step in steps:
                 if "speak" in step:
                     self._speak(step["speak"])
@@ -93,7 +100,8 @@ class StepExecutor:
 
         Steps: {"speak": "text"} or {"action": "name", "args": {...}}
         For ACTIONS_NEEDING_RESPONSE: executes, adds result to context,
-        then generates response from LLM.
+        then generates response from LLM. All speak steps are skipped when
+        such an action is present - the secondary LLM call handles speaking.
 
         Args:
             raw: Raw LLM response text containing steps.
@@ -118,13 +126,14 @@ class StepExecutor:
                 if action_name in ACTIONS_NEEDING_RESPONSE:
                     pending_response_needed = True
 
-            if "speak" in step:
+            if "speak" in step and not pending_response_needed:
                 self._speak(step["speak"])
 
         if action_results:
             self.llm.add_user_message("\n".join(action_results))
 
         if pending_response_needed:
+            logger.info("Action results in context: %s", action_results)
             self.robot.set_eyes("thinking")
             response = self.llm.generate_response()
             logger.info("LLM: %s", response[:200] if response else "")

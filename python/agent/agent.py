@@ -52,15 +52,18 @@ class RobotAgent:
                     time.sleep(0.5 if not text else 1.0)
                 except ConnectionError as e:
                     logger.warning("Connection lost, reconnecting to robot... %s", e)
+                    self.robot.set_eyes(None)
                     self.robot.reconnect()
                 except RuntimeError as e:
                     if self.robot.is_socket_error(e):
                         logger.warning("Socket lost, reconnecting to robot...")
+                        self.robot.set_eyes(None)
                         self.robot.reconnect()
                     else:
                         raise
                 except paramiko.SSHException as e:
                     logger.warning("SSH error, reconnecting to robot... %s", e)
+                    self.robot.set_eyes(None)
                     self.robot.reconnect()
         except KeyboardInterrupt:
             logger.info("Shutting down...")
