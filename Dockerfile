@@ -110,7 +110,10 @@ RUN pip install --no-cache-dir /tmp/wheelhouse/qi-*.whl \
     && rm -rf /tmp/wheelhouse /tmp/requirements.txt /root/.cache
 
 COPY python /app/python
-COPY data /app/data
+
+RUN mkdir -p /app/data \
+    && echo '{}' > /app/data/known_hosts.json \
+    && chown -R nao:nao /app/data
 
 WORKDIR /app/python
 USER nao
@@ -119,4 +122,4 @@ ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
     PYTHONPATH=/app/python
 
-ENTRYPOINT ["python", "-m", "main"]
+ENTRYPOINT ["python", "main.py"]
