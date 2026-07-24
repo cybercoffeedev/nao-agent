@@ -2,3 +2,4 @@ python-dotenv
 paramiko
 openai
 ddgs
+httpx
