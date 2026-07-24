@@ -21,5 +21,5 @@ class RobotTTS:
         """Say provided message with built-in TTS."""
         try:
             self.tts.say(text)
-        except Exception as e:
+        except RuntimeError as e:
             logger.error("Couldn't say the message: %s", e)

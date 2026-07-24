@@ -142,7 +142,7 @@ class RobotActions:
             if results:
                 return "\n".join(r["body"] for r in results)
             return "No results found."
-        except Exception as e:
+        except (OSError, ValueError) as e:
             return f"Search error: {e}"
 
     def execute(self, name: str, *args: Any, **kwargs: Any) -> str:

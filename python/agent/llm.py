@@ -3,7 +3,7 @@
 import logging
 import time
 
-from openai import OpenAI
+from openai import APIError, OpenAI
 
 logger = logging.getLogger(__name__)
 
@@ -84,13 +84,14 @@ class LLMManager:
         if assistant_count <= self.max_turns:
             return
 
-        target = assistant_count - self.max_turns
+        target = assistant_count - self.max_turns + 1
         count = 0
         for i, msg in enumerate(self.context):
             if msg.get("role") == "assistant":
                 count += 1
                 if count == target:
-                    self.context = [self.context[0]] + self.context[i:]
+                    cut = max(1, i - 1)
+                    self.context = [self.context[0]] + self.context[cut:]
                     return
 
     def add_user_message(self, text: str) -> None:
@@ -109,7 +110,7 @@ class LLMManager:
                 completion = self.client.chat.completions.create(
                     model=self.model,
                     messages=self.context,
-                    max_tokens=256,
+                    max_tokens=512,
                     stream=False,
                 )
                 if not completion.choices:
@@ -121,7 +122,7 @@ class LLMManager:
                     self.context.append({"role": "assistant", "content": text})
                     self._trim_context()
                 return text
-            except Exception as e:
+            except APIError as e:
                 if attempt < MAX_RETRIES - 1:
                     delay = BASE_DELAY * (2 ** attempt)
                     logger.warning(

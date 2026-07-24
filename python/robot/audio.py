@@ -145,7 +145,7 @@ class RobotAudio:
         """Start recording audio and subscribe to speech detection."""
         try:
             self.audio_recorder.stopMicrophonesRecording()
-        except Exception:
+        except RuntimeError:
             logger.debug("No active recording to stop")
         self.speech_reco.subscribe("SpeechDetector")
         self.audio_recorder.startMicrophonesRecording(
@@ -175,7 +175,7 @@ class RobotAudio:
                 ssh = self._get_ssh()
                 with ssh.open_sftp() as sftp:
                     sftp.get(self.remote_wav_path, local_path)
-            except Exception as e:
+            except (paramiko.SSHException, OSError) as e:
                 self._close_ssh()
                 raise RuntimeError(f"SFTP download failed: {e}") from e
 

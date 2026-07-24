@@ -27,7 +27,7 @@ class StepExecutor:
         self.robot = robot
         self.llm = llm
         self.parser = ResponseParser()
-        self._executor = ThreadPoolExecutor(max_workers=2)
+        self._executor = ThreadPoolExecutor(max_workers=1)
         self._abandoned_futures: list[Future] = []
         self._lock = threading.Lock()
 

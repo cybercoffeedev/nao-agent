@@ -83,3 +83,6 @@ class RobotEyes:
             self.leds.setIntensity("FaceLeds", 1.0)
         else:
             self.task.start(True)
+            with self._lock:
+                if not self._running:
+                    self.task.stop()
