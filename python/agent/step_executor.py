@@ -136,7 +136,7 @@ class StepExecutor:
             logger.info("Action results in context: %s", action_results)
             self.robot.set_eyes("thinking")
             response = self.llm.generate_response()
-            logger.info("LLM: %s", response[:200] if response else "")
+            self.llm.log_preview(response)
             if response:
                 response_steps = parse_steps(response)
                 self._speak_response(response_steps, response)

@@ -47,10 +47,10 @@ class RobotAgent:
                         logger.info("User: %s", text)
                         self.llm.add_user_message(text)
                         response = self.llm.generate_response()
-                        logger.info("LLM: %s", response[:200] if response else "")
+                        self.llm.log_preview(response)
                         self.step_executor.execute(response)
                     time.sleep(0.5 if not text else 1.0)
-                except ConnectionError as e:
+                except (ConnectionError, paramiko.SSHException) as e:
                     logger.warning("Connection lost, reconnecting to robot... %s", e)
                     self.robot.set_eyes(None)
                     self.robot.reconnect()
@@ -61,10 +61,6 @@ class RobotAgent:
                         self.robot.reconnect()
                     else:
                         raise
-                except paramiko.SSHException as e:
-                    logger.warning("SSH error, reconnecting to robot... %s", e)
-                    self.robot.set_eyes(None)
-                    self.robot.reconnect()
         except KeyboardInterrupt:
             logger.info("Shutting down...")
         finally:

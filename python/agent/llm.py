@@ -100,6 +100,11 @@ class LLMManager:
         self.context.append({"role": "user", "content": text})
         self._trim_context()
 
+    def log_preview(self, response: str, limit: int = 200) -> None:
+        """Log a preview of a non-empty response."""
+        if response:
+            logger.info("LLM: %s", response[:limit])
+
     def generate_response(self) -> str:
         """Generate a response from the LLM with retry.
 
