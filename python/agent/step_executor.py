@@ -1,8 +1,7 @@
 """Step executor - executes parsed action steps."""
 
 import logging
-import threading
-from concurrent.futures import Future, ThreadPoolExecutor, TimeoutError as FuturesTimeoutError
+from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeoutError
 
 from .llm import LLMManager
 from .response_parser import parse_steps, clean_for_tts
@@ -22,20 +21,14 @@ class StepExecutor:
 
         Args:
             robot: Robot instance for executing actions.
-            llm: LLM manager for adding context and generating responses.
+            llm: Language model manager.
         """
         self.robot = robot
         self.llm = llm
         self._executor = ThreadPoolExecutor(max_workers=1)
-        self._abandoned_futures: list[Future] = []
-        self._lock = threading.Lock()
 
     def shutdown(self) -> None:
-        """Shut down the thread pool and cancel abandoned futures."""
-        with self._lock:
-            for future in self._abandoned_futures:
-                future.cancel()
-            self._abandoned_futures.clear()
+        """Shut down the thread pool."""
         self._executor.shutdown(wait=True)
 
     def _execute_action(self, action_name: str, action_args: dict) -> str:
@@ -49,33 +42,25 @@ class StepExecutor:
             Action result string.
         """
         logger.info("Executing: %s %s", action_name, action_args or "")
+        future = self._executor.submit(
+            self.robot.execute_action, action_name, **action_args
+        )
         try:
-            future = self._executor.submit(
-                self.robot.execute_action, action_name, **action_args
-            )
-            try:
-                return future.result(timeout=TOOL_TIMEOUT)
-            except FuturesTimeoutError:
-                with self._lock:
-                    self._abandoned_futures.append(future)
-                result = f"Timeout after {TOOL_TIMEOUT}s"
-                logger.warning(result)
-                return result
+            return future.result(timeout=TOOL_TIMEOUT)
+        except FuturesTimeoutError:
+            logger.warning("Timeout after %ds for %s", TOOL_TIMEOUT, action_name)
+            return f"Timeout after {TOOL_TIMEOUT}s"
         except Exception as e:
-            result = f"Error: {e}"
-            logger.error(result)
-            return result
+            logger.error("Error: %s", e)
+            return f"Error: {e}"
 
     def _speak(self, text: str) -> None:
         """Turn off eyes and speak text."""
         self.robot.set_eyes(None)
         self.robot.speak(text)
 
-    def _speak_response(self, steps: list[dict] | None, raw: str) -> None:
-        """Execute actions and speak text from secondary LLM response.
-
-        Actions are executed first, then speak. This allows recovery from
-        a malformed primary response (e.g. missing args).
+    def _speak_raw_or_fallback(self, steps: list[dict] | None, raw: str) -> None:
+        """Speak the first speak step found, or fall back to cleaned raw text.
 
         Args:
             steps: Already parsed steps (to avoid double parsing).
@@ -83,25 +68,37 @@ class StepExecutor:
         """
         if steps:
             for step in steps:
-                if "action" in step:
-                    self._execute_action(step["action"], step.get("args", {}))
-                    self.robot.set_eyes(None)
-            for step in steps:
                 if "speak" in step:
                     self._speak(step["speak"])
                     return
-
         cleaned = clean_for_tts(raw)
         if cleaned:
             self._speak(cleaned)
+
+    def _run_followup(self, action_results: list[str]) -> None:
+        """Generate a follow-up response from the LLM and speak it inline.
+
+        Used when an ACTIONS_NEEDING_RESPONSE action runs, so the spoken
+        answer happens at the right point in the step sequence.
+
+        Args:
+            action_results: Results from actions just executed.
+        """
+        self.llm.add_user_message("\n".join(action_results))
+        logger.info("Action results in context: %s", action_results)
+        self.robot.set_eyes("thinking")
+        response = self.llm.generate_response()
+        self.llm.log_preview(response)
+        if response:
+            self._speak_raw_or_fallback(parse_steps(response), response)
 
     def execute(self, raw: str) -> None:
         """Parse JSON steps from LLM and execute them.
 
         Steps: {"speak": "text"} or {"action": "name", "args": {...}}
-        For ACTIONS_NEEDING_RESPONSE: executes, adds result to context,
-        then generates response from LLM. All speak steps are skipped when
-        such an action is present - the secondary LLM call handles speaking.
+        For ACTIONS_NEEDING_RESPONSE: executes inline, then immediately runs
+        a follow-up LLM call and speaks its answer. Subsequent steps continue
+        from there, preserving the order requested by the user.
 
         Args:
             raw: Raw LLM response text containing steps.
@@ -109,10 +106,9 @@ class StepExecutor:
         steps = parse_steps(raw)
 
         if not steps or not isinstance(steps, list):
-            self._speak_response(None, raw)
+            self._speak_raw_or_fallback(None, raw)
             return
 
-        pending_response_needed = False
         action_results: list[str] = []
 
         for step in steps:
@@ -124,20 +120,12 @@ class StepExecutor:
 
                 action_results.append(f"[Result: {result}]")
                 if action_name in ACTIONS_NEEDING_RESPONSE:
-                    pending_response_needed = True
+                    self._run_followup(action_results)
+                    action_results.clear()
+                    continue
 
-            if "speak" in step and not pending_response_needed:
+            if "speak" in step:
                 self._speak(step["speak"])
 
         if action_results:
             self.llm.add_user_message("\n".join(action_results))
-
-        if pending_response_needed:
-            logger.info("Action results in context: %s", action_results)
-            self.robot.set_eyes("thinking")
-            response = self.llm.generate_response()
-            self.llm.log_preview(response)
-            if response:
-                response_steps = parse_steps(response)
-                self._speak_response(response_steps, response)
-            self.robot.set_eyes(None)
