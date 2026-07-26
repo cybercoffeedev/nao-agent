@@ -44,8 +44,8 @@ class RobotActions:
     def wave_right_hand(self) -> str:
         """Wave the robot's right hand."""
         family: str = self.posture.getPostureFamily()
-        if family in ("LyingBelly", "LyingBack"):
-            return "Cannot wave while lying down."
+        if family in ("LyingBelly", "LyingBack", "Sitting"):
+            return f"Cannot wave while {family.lower()}."
         names = ["RShoulderPitch", "RShoulderRoll", "RElbowRoll", "RWristYaw"]
         time_lists = [[1.5, 1.75, 2, 2.35, 2.75, 3, 4.5] for _ in range(4)]
         angle_lists = [
@@ -75,8 +75,11 @@ class RobotActions:
         """Change robot posture if not already in target state."""
         if self.posture.getPostureFamily() == family_name:
             return already_msg
-        self._set_autonomous_moves(autonomous_moves)
-        self.posture.goToPosture(posture_name, 0.8)
+        self._set_autonomous_moves(False)
+        try:
+            self.posture.goToPosture(posture_name, 0.5)
+        finally:
+            self._set_autonomous_moves(autonomous_moves)
         return done_msg
 
     @action("Make the robot sit down.")

@@ -80,6 +80,9 @@ class RobotEyes:
             self.task.stop()
 
         if not mode:
-            self.leds.setIntensity("FaceLeds", 1.0)
+            try:
+                self.leds.setIntensity("FaceLeds", 1.0)
+            except RuntimeError:
+                pass
         else:
             self.task.start(True)
