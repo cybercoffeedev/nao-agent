@@ -1,0 +1,86 @@
+services:
+  nao-agent:
+    build:
+      context: ../Dockerfile
+      target: production
+    env_file: .env
+    environment:
+      - HOME=/tmp
+      - LOCAL_WAV_PATH=/tmp/capture.wav
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    tmpfs:
+      - /tmp
+      - /app/logs
+    networks:
+      - agent-network
+    depends_on:
+      - llama-server
+      - whisper-server
+
+  llama-server:
+    image: ghcr.io/ggml-org/llama.cpp:server-cuda13
+    container_name: llama-server
+    restart: unless-stopped
+    volumes:
+      - ./hf_cache:/root/.cache/huggingface
+    environment:
+      - LLAMA_ARG_HF_REPO=Qwen/Qwen2.5-14B-Instruct-GGUF:q4_k_m
+      - LLAMA_ARG_HOST=0.0.0.0
+      - LLAMA_ARG_PORT=8080
+      - LLAMA_ARG_N_GPU_LAYERS=999
+      - LLAMA_ARG_MAIN_GPU=0
+      - LLAMA_ARG_TEMP=0.4
+      - LLAMA_ARG_TOP_P=0.8
+      - LLAMA_ARG_MIN_P=0.1
+      - LLAMA_ARG_PRESENCE_PENALTY=1.0
+      - LLAMA_ARG_CTX_SIZE=8192
+      - LLAMA_ARG_N_PARALLEL=1
+      - LLAMA_ARG_SPEC_DRAFT_N_MAX=4
+      - LLAMA_ARG_FLASH_ATTN=on
+      - LLAMA_ARG_CACHE_TYPE_K=q4_0
+      - LLAMA_ARG_CACHE_TYPE_V=q4_0
+      - LLAMA_ARG_SPEC_DRAFT_TYPE_K=q4_0
+      - LLAMA_ARG_SPEC_DRAFT_TYPE_V=q4_0
+      - LLAMA_ARG_ENABLE_AUTO_TOOL_CHOICE=1
+      - LLAMA_ARG_TOOL_CALL_PARSER=qwen
+      - LLAMA_ARG_JINJA=1
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    networks:
+      - agent-network
+
+  whisper-server:
+    image: ghcr.io/ggml-org/whisper.cpp:main-cuda
+    container_name: whisper-server
+    restart: unless-stopped
+    volumes:
+      - ./whisper_models:/models
+    environment:
+      - LD_LIBRARY_PATH=""
+    entrypoint: ["/app/build/bin/whisper-server"]
+    command: [
+      "--host", "0.0.0.0",
+      "--port", "8080",
+      "--language", "pl",
+      "-m", "/models/ggml-large-v3-turbo-q5_0.bin"
+    ]
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    networks:
+      - agent-network
+
+networks:
+  agent-network:
+    driver: bridge
