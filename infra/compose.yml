@@ -64,13 +64,15 @@ services:
       - ./whisper_models:/models
     environment:
       - LD_LIBRARY_PATH=""
-    entrypoint: ["/app/build/bin/whisper-server"]
-    command: [
-      "--host", "0.0.0.0",
-      "--port", "8080",
-      "--language", "pl",
-      "-m", "/models/ggml-large-v3-turbo-q5_0.bin"
-    ]
+    entrypoint: >
+      /bin/sh -c '
+        MODEL_PATH="/models/ggml-large-v3-turbo-q5_0.bin"
+        if [ ! -f "$$MODEL_PATH" ]; then
+          echo "Downloading whisper model..."
+          wget -q -O "$$MODEL_PATH" "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-large-v3-turbo-q5_0.bin"
+        fi
+        exec /app/build/bin/whisper-server --host 0.0.0.0 --port 8080 --language pl -m "$$MODEL_PATH"
+      '
     deploy:
       resources:
         reservations:
