@@ -1,7 +1,7 @@
 services:
   nao-agent:
     build:
-      context: ../Dockerfile
+      context: ..
       target: production
     env_file: .env
     environment:
