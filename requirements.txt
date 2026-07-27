@@ -1,5 +1,5 @@
-python-dotenv
-paramiko
-openai
-ddgs
-httpx
+python-dotenv==1.2.2
+paramiko==5.0.0
+openai==2.48.0
+ddgs==9.14.4
+httpx==0.28.1
