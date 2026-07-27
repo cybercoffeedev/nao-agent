@@ -12,7 +12,6 @@ class Config:
     robot_port: int = 9559
     robot_username: str = ""
     robot_password: str = ""
-    nvidia_api_key: str = ""
     whisper_url: str = ""
     openai_base_url: str = ""
     model: str = ""
@@ -23,7 +22,6 @@ class Config:
         """Validate required fields after initialization."""
         required_fields = {
             "robot_ip": self.robot_ip,
-            "nvidia_api_key": self.nvidia_api_key,
             "whisper_url": self.whisper_url,
             "openai_base_url": self.openai_base_url,
             "model": self.model,
@@ -44,7 +42,6 @@ class Config:
             robot_port=int(os.getenv("ROBOT_PORT", "9559")),
             robot_username=os.getenv("ROBOT_USERNAME", ""),
             robot_password=os.getenv("ROBOT_PASSWORD", ""),
-            nvidia_api_key=os.environ.get("NVIDIA_API_KEY", ""),
             whisper_url=os.environ.get("WHISPER_URL", ""),
             openai_base_url=os.environ.get("OPENAI_BASE_URL", ""),
             model=os.environ.get("MODEL", ""),

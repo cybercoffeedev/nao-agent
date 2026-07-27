@@ -45,7 +45,6 @@ def main() -> None:
         local_wav_path=config.local_wav_path,
     )
     llm = LLMManager(
-        api_key=config.nvidia_api_key,
         url=config.openai_base_url,
         model=config.model,
         system_msg=build_system_prompt(

@@ -52,23 +52,21 @@ class LLMManager:
 
     def __init__(
         self,
-        api_key: str,
         url: str,
         model: str,
         system_msg: str,
+        api_key: str = "",
         max_turns: int = 8,
     ) -> None:
         """Initialize LLM manager.
 
         Args:
-            api_key: API key for authentication.
             url: Base URL for the OpenAI-compatible API.
             model: Model name to use for completions.
             system_msg: Full system prompt for the LLM.
+            api_key: Optional API key for authentication.
             max_turns: Maximum number of conversation turns to keep in context.
         """
-        if not api_key:
-            raise ValueError("api_key cannot be empty")
         if not url:
             raise ValueError("url cannot be empty")
         if not model:
