@@ -3,7 +3,7 @@ FROM python:3.13-slim as builder
 
 ARG QI_REPOSITORY="https://github.com/aldebaran/libqi.git"
 ARG QI_VERSION="4.0.5"
-ARG QI_PATH="$HOME/libqi"
+ARG QI_PATH="/tmp/libqi"
 
 RUN apt-get update && apt-get install -y \
     build-essential \
@@ -45,7 +45,7 @@ RUN conan install . \
     -c tools.build:skip_test=true
 
 RUN python -m build \
-    --config-setting cmake.define.CMAKE_TOOLCHAIN_FILE=$PWD/build/linux-x86_64-gcc-release/generators/conan_toolchain.cmake
+    --config-setting cmake.define.CMAKE_TOOLCHAIN_FILE=${PWD}/build/linux-x86_64-gcc-release/generators/conan_toolchain.cmake
 
 RUN auditwheel repair \
     --strip \
@@ -55,7 +55,7 @@ RUN auditwheel repair \
 # dev configuration
 FROM python:3.13-slim as dev
 
-ARG USERNAME
+ARG USERNAME=dev
 ARG USER_UID=1000
 ARG USER_GID=$USER_UID
 
@@ -94,12 +94,15 @@ CMD ["/bin/bash"]
 # production configuration
 FROM python:3.13-slim as production
 
+ARG USER_UID=1000
+ARG USER_GID=1000
+
 RUN apt-get update && apt-get install -y --no-install-recommends \
     openssh-client \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
-RUN groupadd --gid 1000 nao \
-    && useradd --uid 1000 --gid 1000 --create-home nao -s /bin/bash
+RUN groupadd --gid $USER_GID nao \
+    && useradd --uid $USER_UID --gid $USER_GID --create-home nao -s /bin/bash
 
 COPY --from=builder /tmp/libqi-python/wheelhouse /tmp/wheelhouse
 
