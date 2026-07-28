@@ -47,6 +47,7 @@ def main() -> None:
     llm = LLMManager(
         url=config.openai_base_url,
         model=config.model,
+        api_key=config.openai_api_key,
         system_msg=build_system_prompt(
             actions=ACTION_DESCRIPTIONS,
             user_prompt=load_user_prompt(),
