@@ -14,7 +14,7 @@ class Config:
     robot_password: str = "nao"
     whisper_url: str = ""
     openai_base_url: str = ""
-    openai_api_key: str = ""
+    openai_api_key: str = "dummy"
     model: str = "model"
     local_wav_path: str = "./capture.wav"
     ssh_port: int = 22
