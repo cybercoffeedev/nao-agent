@@ -44,7 +44,7 @@ class Config:
             robot_password=os.getenv("ROBOT_PASSWORD", "nao"),
             whisper_url=os.environ.get("WHISPER_URL", ""),
             openai_base_url=os.environ.get("OPENAI_BASE_URL", ""),
-            openai_api_key=os.environ.get("OPENAI_API_KEY", ""),
+            openai_api_key=os.environ.get("OPENAI_API_KEY", "dummy"),
             model=os.environ.get("MODEL", "model"),
             ssh_port=int(os.getenv("SSH_PORT", "22")),
             local_wav_path=os.getenv("LOCAL_WAV_PATH", "./capture.wav"),
