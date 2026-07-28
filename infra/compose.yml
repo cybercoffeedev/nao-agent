@@ -71,7 +71,7 @@ services:
           echo "Downloading whisper model..."
           wget -q -O "$$MODEL_PATH" "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-large-v3-turbo-q5_0.bin"
         fi
-        exec /app/build/bin/whisper-server --host 0.0.0.0 --port 8080 --language pl -m "$$MODEL_PATH"
+        exec /app/build/bin/whisper-server --host 0.0.0.0 --port 8081 --language pl -m "$$MODEL_PATH"
       '
     deploy:
       resources:

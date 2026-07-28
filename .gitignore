@@ -1,5 +1,7 @@
 .env
 data/
+infra/data
+infra/whisper_models
 models/
 logs/
 python/__pycache__
