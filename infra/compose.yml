@@ -13,6 +13,8 @@ services:
     tmpfs:
       - /tmp
       - /app/logs
+    volumes:
+      - ./data/system_msg.txt:/app/data/system_msg.txt
     networks:
       - agent-network
     depends_on:
