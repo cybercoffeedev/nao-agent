@@ -14,7 +14,7 @@ services:
       - /tmp
       - /app/logs
     volumes:
-      - ./data/system_msg.txt:/app/data/system_msg.txt
+      - ./data:/app/data
     networks:
       - agent-network
     depends_on:
