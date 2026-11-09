@@ -1,9 +1,24 @@
+# Secrets and local configuration
 .env
+
+# Runtime data
 data/
 infra/data
+infra/hf_cache
 infra/whisper_models
+capture.wav
+
+# Models and logs
 models/
 logs/
-python/__pycache__
-python/*/__pycache__
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.venv/
+venv/
+
+# Tooling
 .opencode/
