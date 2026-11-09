@@ -1,8 +1,15 @@
 # builder configuration
-FROM python:3.13-slim as builder
+# Bookworm is pinned because libqi 4.0.5 is only validated with GCC 12; newer GCC
+# versions diagnose ill-formed constructs in the vendored `ka` headers.
+FROM python:3.13-slim-bookworm as builder
 
 ARG QI_REPOSITORY="https://github.com/aldebaran/libqi.git"
 ARG QI_VERSION="4.0.5"
+# The 3.1.5 release does not build on Python 3.13 (`_Py_IsFinalizing` was removed).
+# Pin the master commit that adds the `Py_IsFinalizing` compatibility branch until a
+# release containing it exists.
+ARG QI_PYTHON_REPOSITORY="https://github.com/aldebaran/libqi-python.git"
+ARG QI_PYTHON_COMMIT="f51dbb31f22e8b154121ad60654776bd8ad81dc8"
 ARG QI_PATH="/tmp/libqi"
 
 RUN apt-get update && apt-get install -y \
@@ -16,9 +23,9 @@ RUN apt-get update && apt-get install -y \
 RUN pip install --no-cache-dir --upgrade \
     pip \
     "conan>=2.0.0,<3.0.0" \
-    "cmake>=3.23" \
-    build \
-    auditwheel
+    "cmake>=3.23,<4" \
+    "build>=1,<2" \
+    "auditwheel>=6,<7"
 
 RUN conan profile detect --force
 
@@ -33,10 +40,10 @@ RUN git clone \
 RUN conan export "${QI_PATH}" \
     --version "${QI_VERSION}"
 
-RUN git clone \
-    --depth 1 \
-    https://github.com/aldebaran/libqi-python.git \
-    /tmp/libqi-python
+RUN git init /tmp/libqi-python \
+    && git -C /tmp/libqi-python remote add origin "${QI_PYTHON_REPOSITORY}" \
+    && git -C /tmp/libqi-python fetch --depth 1 origin "${QI_PYTHON_COMMIT}" \
+    && git -C /tmp/libqi-python checkout --detach FETCH_HEAD
 
 WORKDIR /tmp/libqi-python
     
@@ -53,7 +60,7 @@ RUN auditwheel repair \
     dist/qi-*.whl
 
 # dev configuration
-FROM python:3.13-slim as dev
+FROM python:3.13-slim-bookworm as dev
 
 ARG USERNAME=dev
 ARG USER_UID=1000
@@ -62,37 +69,35 @@ ARG USER_GID=$USER_UID
 RUN groupadd --gid $USER_GID $USERNAME \
     && useradd --uid $USER_UID --gid $USER_GID -m $USERNAME -s /bin/bash \
     && apt-get update \
-    && apt-get install -y sudo curl \
+    && apt-get install -y --no-install-recommends \
+        curl \
+        git \
+        openssh-client \
+        sudo \
     && echo "$USERNAME ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/$USERNAME \
     && chmod 0440 /etc/sudoers.d/$USERNAME \
-    && apt-get install -y git \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
-
-RUN curl -fsSL -o /tmp/opencode.tar.gz https://github.com/anomalyco/opencode/releases/latest/download/opencode-linux-x64.tar.gz \
-    && tar -xzf /tmp/opencode.tar.gz -C /tmp \
-    && mv /tmp/opencode /usr/local/bin/opencode \
-    && chmod +x /usr/local/bin/opencode \
-    && rm /tmp/opencode.tar.gz
 
 ENV PYTHONUNBUFFERED=1
 
 COPY --from=builder /tmp/libqi-python/wheelhouse /tmp/wheelhouse
 
-COPY requirements.txt /tmp/requirements.txt
+COPY requirements.txt requirements-dev.txt /tmp/
 
 RUN pip install --no-cache-dir /tmp/wheelhouse/qi-*.whl \
-    && pip install --no-cache-dir -r /tmp/requirements.txt \
-    && rm -rf /tmp/wheelhouse /tmp/requirements.txt
+    && pip install --no-cache-dir -r /tmp/requirements-dev.txt \
+    && rm -rf /tmp/wheelhouse /tmp/requirements.txt /tmp/requirements-dev.txt
 
-RUN mkdir -p /home/$USERNAME/.local/share /home/$USERNAME/.local/state /home/$USERNAME/.config \
-    && chown -R $USERNAME:$USERNAME /home/$USERNAME/.local /home/$USERNAME/.config
+# Pre-create the OpenCode directory so the named volume keeps the dev user's ownership.
+RUN mkdir -p /home/$USERNAME/.opencode \
+    && chown -R $USERNAME:$USERNAME /home/$USERNAME/.opencode
 
 USER $USERNAME
 WORKDIR /workspace/nao-agent
 CMD ["/bin/bash"]
 
 # production configuration
-FROM python:3.13-slim as production
+FROM python:3.13-slim-bookworm as production
 
 ARG USER_UID=1000
 ARG USER_GID=1000

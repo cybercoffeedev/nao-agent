@@ -11,3 +11,10 @@ models
 *.md
 .vscode
 .idea
+
+# Local runtime data and model caches; the image never needs them.
+data
+infra/data
+infra/hf_cache
+infra/whisper_models
+capture.wav
