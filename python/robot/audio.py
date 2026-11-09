@@ -1,5 +1,6 @@
 """Manages robot audio recording, speech recognition and file transfer."""
 
+import contextlib
 import json
 import logging
 import threading
@@ -135,10 +136,8 @@ class RobotAudio:
     def _close_ssh(self) -> None:
         """Close the current SSH connection if open."""
         if self._ssh is not None:
-            try:
+            with contextlib.suppress(paramiko.SSHException, OSError):
                 self._ssh.close()
-            except (paramiko.SSHException, OSError):
-                pass
             self._ssh = None
 
     def start_recording(self) -> None:

@@ -5,9 +5,10 @@ import time
 
 import paramiko
 
+from robot import Robot
+
 from .asr import WhisperASR
 from .llm import LLMManager
-from robot import Robot
 from .speech_detector import SpeechDetector
 from .step_executor import StepExecutor
 

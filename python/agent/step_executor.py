@@ -1,11 +1,13 @@
 """Step executor - executes parsed action steps."""
 
 import logging
-from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeoutError
+from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import TimeoutError as FuturesTimeoutError
+
+from robot import Robot
 
 from .llm import LLMManager
-from .response_parser import parse_steps, clean_for_tts
-from robot import Robot
+from .response_parser import clean_for_tts, parse_steps
 
 logger = logging.getLogger(__name__)
 

@@ -1,5 +1,6 @@
 """Manages the NAO robot's face LED animations using ALLeds service."""
 
+import contextlib
 import threading
 
 import qi
@@ -80,9 +81,7 @@ class RobotEyes:
             self.task.stop()
 
         if not mode:
-            try:
+            with contextlib.suppress(RuntimeError):
                 self.leds.setIntensity("FaceLeds", 1.0)
-            except RuntimeError:
-                pass
         else:
             self.task.start(True)

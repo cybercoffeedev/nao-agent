@@ -1,7 +1,8 @@
 """Manages robot actions like waving, sitting, standing, etc."""
 
 import inspect
-from typing import Any, Callable
+from collections.abc import Callable
+from typing import Any
 
 
 def action(description: str) -> Callable:
@@ -95,12 +96,24 @@ class RobotActions:
     @action("Make the robot lie down on its stomach.")
     def lie_on_stomach(self) -> str:
         """Make the robot lie on stomach."""
-        return self._change_posture("LyingBelly", "LyingBelly", False, "Already lying on stomach.", "Lying on stomach.")
+        return self._change_posture(
+            "LyingBelly",
+            "LyingBelly",
+            False,
+            "Already lying on stomach.",
+            "Lying on stomach.",
+        )
 
     @action("Make the robot lie down on its back.")
     def lie_on_back(self) -> str:
         """Make the robot lie on back."""
-        return self._change_posture("LyingBack", "LyingBack", False, "Already lying on back.", "Lying on back.")
+        return self._change_posture(
+            "LyingBack",
+            "LyingBack",
+            False,
+            "Already lying on back.",
+            "Lying on back.",
+        )
 
     @action("Check the robot's status including battery, charging state, and CPU temperature.")
     def get_status(self) -> str:

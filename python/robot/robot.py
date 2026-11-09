@@ -1,5 +1,6 @@
 """Main robot class that manages connection and delegates to submodules."""
 
+import contextlib
 import logging
 import threading
 from typing import Any
@@ -85,10 +86,8 @@ class Robot:
             ssh_port=self.ssh_port,
         )
         self._speech_reco.setLanguage("Polish")
-        try:
+        with contextlib.suppress(RuntimeError):
             self._speech_reco.unsubscribe("SpeechDetector")
-        except RuntimeError:
-            pass
         self._speech_reco.pause(True)
         self._speech_reco.setVocabulary(["NAO"], False)
         self._speech_reco.pause(False)
