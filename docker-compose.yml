@@ -28,3 +28,8 @@ services:
     tmpfs:
       - /tmp
       - /app/logs
+    volumes:
+      - nao-data:/app/data
+
+volumes:
+  nao-data:

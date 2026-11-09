@@ -14,7 +14,7 @@ services:
       - /tmp
       - /app/logs
     volumes:
-      - ./data:/app/data
+      - nao-data:/app/data
     networks:
       - agent-network
     depends_on:
@@ -88,3 +88,6 @@ services:
 networks:
   agent-network:
     driver: bridge
+
+volumes:
+  nao-data:
