@@ -27,7 +27,7 @@ criteria. Architectural decisions are recorded separately in [`docs/adr/`](../ad
 | ID | Milestone | Status | Goal |
 |---|---|---|---|
 | M0 | Baseline and guardrails | Done | Make the repository honest, testable, and safe to build on. |
-| M0.5 | Developer environment | In progress | Provide one working devcontainer for application development. |
+| M0.5 | Developer environment | Done | Provide one working devcontainer for application development. |
 | M1 | Structured output and GBNF | Planned | Enforce the LLM response contract before execution. |
 | M2 | Ports, adapters, action catalog | Planned | Separate orchestration from NAOqi and LLM details. |
 | M3 | Runtime robustness and safety | Planned | Make reconnects, timeouts, shutdown, and action execution predictable. |
@@ -79,9 +79,8 @@ build requires a Docker host and is verified separately.
 **Goal:** provide one documented development environment that can run the application,
 linting, and tests.
 
-**Status:** In progress. The devcontainer builds the `dev` stage of the `Dockerfile`
-directly, without Docker Compose; the image build still needs verification on a Docker or
-Podman host.
+**Status:** Done. The devcontainer builds the `dev` stage of the `Dockerfile` directly,
+without Docker Compose, and was verified with rootless Podman.
 
 **Scope**
 
@@ -103,8 +102,8 @@ Podman host.
 - The README does not claim that an environment works when it does not.
 - The devcontainer configuration is tracked and reproducible.
 
-**Verification note:** the Docker image build must run on a Docker host. It was not
-verified from the sandbox used for the code changes.
+**Verification note:** the image was built with rootless Podman. Inside the container,
+`ruff check .` passes, `pytest` reports 12 passed, and `import qi` succeeds.
 
 ## M1 — Structured output and GBNF
 
