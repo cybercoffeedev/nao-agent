@@ -1,14 +1,16 @@
 {
     "name": "nao-agent",
-    "dockerComposeFile": [
-        "../docker-compose.yml"
-    ],
-    "service": "dev",
-    "runServices": [
-        "dev"
-    ],
+    "build": {
+        "dockerfile": "../Dockerfile",
+        "context": "..",
+        "target": "dev"
+    },
+    "remoteUser": "dev",
+    "workspaceMount": "source=${localWorkspaceFolder},target=/workspace/nao-agent,type=bind",
     "workspaceFolder": "/workspace/nao-agent",
-    "shutdownAction": "stopCompose",
+    "mounts": [
+        "source=opencode-data,target=/home/dev/.opencode,type=volume"
+    ],
     "features": {
         "ghcr.io/devcontainers/features/node:2": {
             "version": "lts"

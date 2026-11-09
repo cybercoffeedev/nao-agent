@@ -10,9 +10,6 @@ services:
     init: true
     stdin_open: true
     tty: true
-    environment:
-      - XDG_CONFIG_HOME=/home/${USERNAME:-dev}/.opencode/config
-      - XDG_DATA_HOME=/home/${USERNAME:-dev}/.opencode/data
     volumes:
       - .:/workspace/nao-agent
       - opencode-data:/home/${USERNAME:-dev}/.opencode

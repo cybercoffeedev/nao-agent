@@ -25,8 +25,8 @@ This starts three services:
 ### Dev Container (recommended)
 
 Open the repository in VS Code and choose **Dev Containers: Reopen in Container**. The
-devcontainer uses the `dev` service from [`docker-compose.yml`](docker-compose.yml), so
-the container has:
+devcontainer builds the `dev` stage of [`Dockerfile`](Dockerfile) directly, without Docker
+Compose, so the container has:
 
 - Python 3.13 with all runtime dependencies;
 - `pytest`, `ruff`, and `jsonschema` from `requirements-dev.txt`;
@@ -48,7 +48,23 @@ pytest
 ```
 
 The robot must be reachable from the container network for hardware tests. The workspace
-is bind-mounted, so host files should be owned by UID/GID `1000` (the default dev user).
+is bind-mounted at `/workspace/nao-agent`.
+
+#### Podman
+
+The devcontainer also works with rootless Podman. Point the Dev Containers extension at the
+Podman CLI in your VS Code user settings:
+
+```json
+{
+  "dev.containers.dockerPath": "podman",
+  "dev.containers.mountWaylandSocket": false
+}
+```
+
+On Linux the extension automatically adds `--userns=keep-id` and disables SELinux labeling
+for the container, so the bind-mounted workspace stays writable. Because the devcontainer
+does not use Docker Compose, `podman-compose` is not required.
 
 ### Dev container without VS Code
 

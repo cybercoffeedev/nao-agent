@@ -79,17 +79,19 @@ build requires a Docker host and is verified separately.
 **Goal:** provide one documented development environment that can run the application,
 linting, and tests.
 
-**Status:** In progress. The unified Compose-based devcontainer is implemented; the Docker
-image build still needs verification on a Docker host.
+**Status:** In progress. The devcontainer builds the `dev` stage of the `Dockerfile`
+directly, without Docker Compose; the image build still needs verification on a Docker or
+Podman host.
 
 **Scope**
 
-- Use the Docker Compose `dev` service as the only devcontainer so that the application,
-  linting, and tests share one environment.
+- Build the devcontainer from the `dev` stage of the `Dockerfile` directly, so the
+  application, linting, and tests share one environment and the setup does not depend on
+  Docker Compose.
 - Install `requirements-dev.txt`, `ruff`, `pytest`, and `openssh-client` in the `dev` image.
 - Build the NAOqi Python bindings (`qi`) in the shared `builder` stage and install the
   resulting wheel in both `dev` and `production`.
-- Pin the libqi-python release tag and the build tooling major versions.
+- Pin the libqi release tag, the libqi-python commit, and the build tooling major versions.
 - Install OpenCode through the Node devcontainer feature and pin the npm version.
 - Persist OpenCode configuration in a named `opencode-data` volume.
 - Document the long first build and the UID/GID expectation.

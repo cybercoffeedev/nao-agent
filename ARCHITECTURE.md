@@ -222,9 +222,10 @@ The production runtime does not call a cloud LLM or cloud ASR provider. See ADR-
 - **Testing:** `pytest`; tests live in `tests/`.
 - **Linting:** `ruff check .`.
 - **Hardware:** HIL checks require a NAO v6; they are documented, not run in CI.
-- **Devcontainer:** the VS Code devcontainer uses the Compose `dev` service, so it
-  includes Python 3.13, `pytest`, `ruff`, and the `qi` bindings built by the `builder`
-  stage. The first build is long because libqi, Boost, and OpenSSL compile from source.
+- **Devcontainer:** the VS Code devcontainer builds the `dev` stage of the `Dockerfile`
+  directly, without Docker Compose, so it also works with rootless Podman. It includes
+  Python 3.13, `pytest`, `ruff`, and the `qi` bindings built by the `builder` stage. The
+  first build is long because libqi, Boost, and OpenSSL compile from source.
 
 ## 9. Future Considerations / Roadmap
 

@@ -92,6 +92,10 @@ RUN pip install --no-cache-dir /tmp/wheelhouse/qi-*.whl \
 RUN mkdir -p /home/$USERNAME/.opencode \
     && chown -R $USERNAME:$USERNAME /home/$USERNAME/.opencode
 
+# Keep OpenCode state inside the named volume mounted at /home/$USERNAME/.opencode.
+ENV XDG_CONFIG_HOME=/home/$USERNAME/.opencode/config \
+    XDG_DATA_HOME=/home/$USERNAME/.opencode/data
+
 USER $USERNAME
 WORKDIR /workspace/nao-agent
 CMD ["/bin/bash"]
