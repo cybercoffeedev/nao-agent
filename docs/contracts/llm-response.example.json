@@ -1,0 +1,15 @@
+[
+  {
+    "speak": "Sprawdzę to w internecie."
+  },
+  {
+    "action": "web_search",
+    "args": {
+      "query": "pogoda w Warszawie"
+    }
+  },
+  {
+    "action": "stand_up",
+    "speak": "Wstaję."
+  }
+]

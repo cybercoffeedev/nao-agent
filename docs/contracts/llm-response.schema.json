@@ -1,0 +1,57 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:nao-agent:contract:llm-response:v0",
+  "title": "NAO Agent LLM response",
+  "description": "An ordered plan of speech and robot actions returned by the LLM.",
+  "type": "array",
+  "minItems": 1,
+  "maxItems": 8,
+  "items": {
+    "$ref": "#/$defs/step"
+  },
+  "$defs": {
+    "step": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "speak": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1000,
+          "description": "Text to speak. May be combined with an action."
+        },
+        "action": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "description": "Action name from the runtime action catalog."
+        },
+        "args": {
+          "type": "object",
+          "description": "Keyword arguments for the action. Only valid with an action.",
+          "additionalProperties": {
+            "type": ["string", "number", "boolean"]
+          }
+        }
+      },
+      "anyOf": [
+        {
+          "required": ["speak"]
+        },
+        {
+          "required": ["action"]
+        }
+      ],
+      "allOf": [
+        {
+          "if": {
+            "required": ["args"]
+          },
+          "then": {
+            "required": ["action"]
+          }
+        }
+      ]
+    }
+  }
+}
