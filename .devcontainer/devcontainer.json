@@ -6,8 +6,6 @@
         "target": "dev"
     },
     "remoteUser": "dev",
-    "workspaceMount": "source=${localWorkspaceFolder},target=/workspace/nao-agent,type=bind",
-    "workspaceFolder": "/workspace/nao-agent",
     "mounts": [
         "source=opencode-data,target=/home/dev/.opencode,type=volume"
     ],

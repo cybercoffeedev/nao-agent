@@ -48,7 +48,8 @@ pytest
 ```
 
 The robot must be reachable from the container network for hardware tests. The workspace
-is bind-mounted at `/workspace/nao-agent`.
+is bind-mounted at `/workspaces/nao-agent`, the default path used by the Dev Containers
+extension, so host and container always see the same files.
 
 #### Podman
 
