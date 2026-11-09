@@ -1,12 +1,23 @@
 {
-    "name": "nao-devcontainer",
+    "name": "nao-agent",
     "dockerComposeFile": [
         "../docker-compose.yml"
     ],
     "service": "dev",
-    "runServices": ["dev"],
+    "runServices": [
+        "dev"
+    ],
     "workspaceFolder": "/workspace/nao-agent",
-    "forwardPorts": [4096],
+    "shutdownAction": "stopCompose",
+    "features": {
+        "ghcr.io/devcontainers/features/node:2": {
+            "version": "lts"
+        }
+    },
+    "postCreateCommand": "npm install -g @opencode/cli@2.2.6",
+    "forwardPorts": [
+        4096
+    ],
     "portsAttributes": {
         "4096": {
             "label": "OpenCode Web",
@@ -16,8 +27,16 @@
     "customizations": {
         "vscode": {
             "extensions": [
-                "ms-python.python"
-            ]
+                "ms-python.python",
+                "charliermarsh.ruff"
+            ],
+            "settings": {
+                "python.defaultInterpreterPath": "/usr/local/bin/python",
+                "python.testing.pytestEnabled": true,
+                "python.testing.pytestArgs": [
+                    "tests"
+                ]
+            }
         }
     }
 }
