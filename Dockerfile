@@ -16,16 +16,18 @@ RUN apt-get update && apt-get install -y \
     build-essential \
     cmake \
     libpython3-dev \
-    patchelf \
     git \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
+# Bookworm ships patchelf 0.14.3, which auditwheel 6 rejects. The PyPI package
+# provides a statically linked binary in /usr/local/bin, which shadows the system one.
 RUN pip install --no-cache-dir --upgrade \
     pip \
     "conan>=2.0.0,<3.0.0" \
     "cmake>=3.23,<4" \
     "build>=1,<2" \
-    "auditwheel>=6,<7"
+    "auditwheel>=6,<7" \
+    "patchelf>=0.14.5,<1"
 
 RUN conan profile detect --force
 
