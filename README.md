@@ -24,7 +24,15 @@ This starts three services:
 
 ### VS Code Dev Container
 
-Open the project in VS Code and reopen in the dev container (uses `.devcontainer/devcontainer.json`).
+The current `.devcontainer/devcontainer.json` is a lightweight OpenCode workspace and does
+not include NAOqi. For the full application environment, use the `dev` Docker target:
+
+```bash
+docker compose run --rm dev
+```
+
+Unifying the devcontainer with the application environment is tracked in
+[`docs/plans/README.md`](docs/plans/README.md) as milestone M0.5.
 
 ## Configuration
 
@@ -36,14 +44,15 @@ All configuration is via environment variables (see `.env.example`):
 | `ROBOT_PORT` | `9559` | NAOqi port |
 | `ROBOT_USERNAME` | `nao` | SSH username |
 | `ROBOT_PASSWORD` | `nao` | SSH password |
-| `WHISPER_URL` | — | whisper.cpp server URL |
-| `OPENAI_BASE_URL` | — | LLM API base URL |
-| `OPENAI_API_KEY` | `sk-no-key-required` | LLM API key |
-| `MODEL` | `model` | LLM model name |
+| `WHISPER_URL` | `http://whisper-server:8081` | whisper.cpp server URL |
+| `OPENAI_BASE_URL` | `http://llama-server:8080/v1` | Local OpenAI-compatible API base URL |
+| `OPENAI_API_KEY` | `dummy` | Compatibility placeholder; no cloud key is used |
+| `MODEL` | `model` | Model name sent to llama.cpp |
 | `SSH_PORT` | `22` | SSH port for SFTP |
 | `LOCAL_WAV_PATH` | `./capture.wav` | Downloaded audio path |
 
-System prompt (`data/system_msg.txt`) — editable file that sets the LLM's language, role, and behavior
+System prompt (`python/prompts/system_msg.txt`) — tracked, editable file that sets the
+LLM's language, role, and behaviour. It is packaged into the production image.
 
 ## Adding Actions
 
@@ -51,11 +60,29 @@ Decorate a method in `python/robot/actions.py` with `@action("description")`:
 
 ```python
 @action("Wave the right hand")
-def wave_right_hand(self, duration: int = 3) -> str:
+def wave_right_hand(self) -> str:
     ...
 ```
 
 The LLM receives action descriptions automatically and can invoke them via structured JSON steps.
+
+## Documentation
+
+- [`docs/plans/README.md`](docs/plans/README.md) — milestones, status, and test matrix
+- [`docs/adr/README.md`](docs/adr/README.md) — architecture decision records
+- [`docs/contracts/README.md`](docs/contracts/README.md) — LLM response contract
+- [`ARCHITECTURE.md`](ARCHITECTURE.md) — current architecture and target boundaries
+- [`AGENTS.md`](AGENTS.md) — contribution and agent conventions
+
+## Testing
+
+```bash
+pip install -r requirements-dev.txt
+ruff check .
+pytest
+```
+
+The GitHub Actions workflow runs the same checks on pull requests and pushes to `main`.
 
 
 ## Tech Stack
