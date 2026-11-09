@@ -27,7 +27,7 @@ criteria. Architectural decisions are recorded separately in [`docs/adr/`](../ad
 | ID | Milestone | Status | Goal |
 |---|---|---|---|
 | M0 | Baseline and guardrails | Done | Make the repository honest, testable, and safe to build on. |
-| M0.5 | Developer environment | Planned | Provide one working devcontainer for application development. |
+| M0.5 | Developer environment | In progress | Provide one working devcontainer for application development. |
 | M1 | Structured output and GBNF | Planned | Enforce the LLM response contract before execution. |
 | M2 | Ports, adapters, action catalog | Planned | Separate orchestration from NAOqi and LLM details. |
 | M3 | Runtime robustness and safety | Planned | Make reconnects, timeouts, shutdown, and action execution predictable. |
@@ -79,19 +79,30 @@ build requires a Docker host and is verified separately.
 **Goal:** provide one documented development environment that can run the application,
 linting, and tests.
 
+**Status:** In progress. The unified Compose-based devcontainer is implemented; the Docker
+image build still needs verification on a Docker host.
+
 **Scope**
 
-- Decide whether the VS Code devcontainer uses the Docker Compose `dev` service or a
-  separate lightweight image.
-- Ensure Python 3.13, project dependencies, `ruff`, and `pytest` are available.
-- Document the NAOqi limitation if the full libqi build is not available in the dev image.
-- Keep the OpenCode workspace usable.
+- Use the Docker Compose `dev` service as the only devcontainer so that the application,
+  linting, and tests share one environment.
+- Install `requirements-dev.txt`, `ruff`, `pytest`, and `openssh-client` in the `dev` image.
+- Build the NAOqi Python bindings (`qi`) in the shared `builder` stage and install the
+  resulting wheel in both `dev` and `production`.
+- Pin the libqi-python release tag and the build tooling major versions.
+- Install OpenCode through the Node devcontainer feature and pin the npm version.
+- Persist OpenCode configuration in a named `opencode-data` volume.
+- Document the long first build and the UID/GID expectation.
 
 **Acceptance criteria**
 
 - A new contributor can open the devcontainer and run `ruff check .` and `pytest`.
+- The dev image can import `qi` and start `python/main.py`.
 - The README does not claim that an environment works when it does not.
 - The devcontainer configuration is tracked and reproducible.
+
+**Verification note:** the Docker image build must run on a Docker host. It was not
+verified from the sandbox used for the code changes.
 
 ## M1 — Structured output and GBNF
 

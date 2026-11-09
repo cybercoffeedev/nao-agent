@@ -222,9 +222,9 @@ The production runtime does not call a cloud LLM or cloud ASR provider. See ADR-
 - **Testing:** `pytest`; tests live in `tests/`.
 - **Linting:** `ruff check .`.
 - **Hardware:** HIL checks require a NAO v6; they are documented, not run in CI.
-- **Devcontainer:** the current VS Code devcontainer is a lightweight OpenCode workspace
-  and does not include NAOqi. Unifying it with the application dev environment is tracked
-  as milestone M0.5.
+- **Devcontainer:** the VS Code devcontainer uses the Compose `dev` service, so it
+  includes Python 3.13, `pytest`, `ruff`, and the `qi` bindings built by the `builder`
+  stage. The first build is long because libqi, Boost, and OpenSSL compile from source.
 
 ## 9. Future Considerations / Roadmap
 

@@ -22,17 +22,52 @@ This starts three services:
 
 ## Development
 
-### VS Code Dev Container
+### Dev Container (recommended)
 
-The current `.devcontainer/devcontainer.json` is a lightweight OpenCode workspace and does
-not include NAOqi. For the full application environment, use the `dev` Docker target:
+Open the repository in VS Code and choose **Dev Containers: Reopen in Container**. The
+devcontainer uses the `dev` service from [`docker-compose.yml`](docker-compose.yml), so
+the container has:
+
+- Python 3.13 with all runtime dependencies;
+- `pytest`, `ruff`, and `jsonschema` from `requirements-dev.txt`;
+- the NAOqi Python bindings (`qi`) built by the `builder` stage of the `Dockerfile`;
+- Git, OpenSSH client, and `sudo` for the non-root `dev` user;
+- OpenCode CLI 2.2.6, installed by `postCreateCommand` through the Node feature.
+
+The first build takes a while:
+
+> The `builder` stage compiles libqi, Boost, and OpenSSL from source. Expect a long first
+> build; later builds reuse the Docker layer cache. A rebuild is only needed when the
+> `Dockerfile` or the pinned libqi versions change.
+
+Inside the container:
+
+```bash
+ruff check .
+pytest
+```
+
+The robot must be reachable from the container network for hardware tests. The workspace
+is bind-mounted, so host files should be owned by UID/GID `1000` (the default dev user).
+
+### Dev container without VS Code
 
 ```bash
 docker compose run --rm dev
 ```
 
-Unifying the devcontainer with the application environment is tracked in
-[`docs/plans/README.md`](docs/plans/README.md) as milestone M0.5.
+This starts the same image without the VS Code and OpenCode additions. Use it for linting,
+tests, and running the application:
+
+```bash
+cd python
+python main.py
+```
+
+### Running the whole stack for development
+
+For a full end-to-end run (agent + llama.cpp + whisper.cpp), use the production stack in
+[`infra/compose.yml`](infra/compose.yml) as described in the quick start.
 
 ## Configuration
 
