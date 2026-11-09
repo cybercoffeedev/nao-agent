@@ -99,7 +99,7 @@ ENV XDG_CONFIG_HOME=/home/$USERNAME/.opencode/config \
     XDG_DATA_HOME=/home/$USERNAME/.opencode/data
 
 USER $USERNAME
-WORKDIR /workspace/nao-agent
+WORKDIR /workspaces/nao-agent
 CMD ["/bin/bash"]
 
 # production configuration

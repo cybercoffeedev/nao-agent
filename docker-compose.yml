@@ -11,7 +11,7 @@ services:
     stdin_open: true
     tty: true
     volumes:
-      - .:/workspace/nao-agent
+      - .:/workspaces/nao-agent
       - opencode-data:/home/${USERNAME:-dev}/.opencode
 
   production:
