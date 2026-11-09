@@ -5,7 +5,7 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
-from agent import RobotAgent, LLMManager, WhisperASR
+from agent import LLMManager, RobotAgent, WhisperASR
 from agent.llm import build_system_prompt
 from config import Config
 from robot import Robot
@@ -13,15 +13,15 @@ from robot.actions import ACTION_DESCRIPTIONS
 
 logger = logging.getLogger(__name__)
 
-SYSTEM_PROMPT_PATH = Path(__file__).parent.parent / "data" / "system_msg.txt"
+SYSTEM_PROMPT_PATH = Path(__file__).parent / "prompts" / "system_msg.txt"
 
 
 def load_user_prompt() -> str:
-    """Read user-defined system prompt from data/system_msg.txt."""
+    """Read the operator-editable system prompt from the packaged prompts directory."""
     try:
         return SYSTEM_PROMPT_PATH.read_text(encoding="utf-8")
     except FileNotFoundError:
-        logger.error("data/system_msg.txt not found")
+        logger.error("%s not found", SYSTEM_PROMPT_PATH)
         return ""
 
 
